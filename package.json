@@ -1,0 +1,27 @@
+{
+  "name": "town-of-peace",
+  "version": "0.1.0",
+  "description": "桃源镇 — 单人运行的文明模拟器",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "new": "tsx src/index.ts --new",
+    "continue": "tsx src/index.ts --continue",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:replay": "tsx src/index.ts --replay --seed 42 --years 50 --times 10",
+    "build": "tsc",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "seedrandom": "^3.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/seedrandom": "^3.0.8",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

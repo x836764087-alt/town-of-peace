@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏘️ 桃源镇 · 完整世界生态架构 v6.0</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #1c2333;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --yellow: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --cyan: #39d2c0;
+  --orange: #f0883e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  padding: 2rem;
+}
+h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.subtitle { color: var(--text2); margin-bottom: 2rem; font-size: 0.95rem; }
+.section { margin-bottom: 2.5rem; }
+.section-title {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+/* Stats bar */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.2rem;
+  text-align: center;
+}
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.stat-label {
+  color: var(--text2);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+/* Module grid */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+.module-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.2rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.module-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+.module-card .module-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.module-card .module-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.status-done { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid var(--green); }
+.status-progress { background: rgba(210,153,34,0.15); color: var(--yellow); border: 1px solid var(--yellow); }
+.status-empty { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid var(--red); }
+.status-design { background: rgba(188,140,255,0.15); color: var(--purple); border: 1px solid var(--purple); }
+.module-files { font-size: 0.8rem; color: var(--text2); margin-bottom: 0.5rem; }
+.module-desc { font-size: 0.85rem; color: var(--text2); line-height: 1.5; }
+.module-subitems { margin-top: 0.5rem; }
+.module-subitem {
+  font-size: 0.8rem;
+  padding: 2px 0;
+  color: var(--text);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+.module-subitem::before {
+  content: "·";
+  color: var(--text2);
+  font-weight: bold;
+  flex-shrink: 0;
+}
+/* Progress bar */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  margin-top: 0.75rem;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s;
+}
+.fill-green { background: var(--green); }
+.fill-yellow { background: var(--yellow); }
+.fill-red { background: var(--red); }
+/* Design doc sections */
+.design-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+.design-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.design-card p, .design-card li {
+  font-size: 0.9rem;
+  color: var(--text2);
+  line-height: 1.7;
+}
+.design-card ul { padding-left: 1.2rem; }
+.design-card li { margin-bottom: 0.3rem; }
+/* Timeline */
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 1.5rem;
+  padding-left: 1rem;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -1.55rem;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+}
+.timeline-year {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+.timeline-text {
+  font-size: 0.85rem;
+  color: var(--text2);
+  margin-top: 0.2rem;
+}
+/* Core rules */
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+.rule-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.rule-num {
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+/* Characters */
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.75rem;
+}
+.char-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+}
+.char-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+.char-title {
+  color: var(--accent);
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+.char-detail {
+  font-size: 0.8rem;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.char-health {
+  color: var(--orange);
+  font-size: 0.78rem;
+  margin-top: 0.3rem;
+}
+/* Tech tree */
+.tech-categories {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.tech-cat h4 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+.tech-cat ul {
+  list-style: none;
+  padding: 0;
+}
+.tech-cat li {
+  font-size: 0.85rem;
+  color: var(--text2);
+  padding: 0.2rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.tech-check { color: var(--green); }
+.tech-x { color: var(--red); }
+/* Tab navigation */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--text2);
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+/* Collapsible */
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.collapsible-header::after {
+  content: '▼';
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+}
+.collapsible-header.open::after {
+  transform: rotate(180deg);
+}
+.collapsible-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.collapsible-body.open {
+  max-height: 2000px;
+}
+/* Summary banner */
+.summary-banner {
+  background: linear-gradient(135deg, rgba(88,166,255,0.1), rgba(188,140,255,0.1));
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.summary-banner p {
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+.summary-banner .highlight {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  body { padding: 1rem; }
+  .module-grid, .char-grid, .rules-grid { grid-template-columns: 1fr; }
+  .tech-categories { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<h1>🏘️ 桃源镇 · 完整世界生态架构</h1>
+<div class="subtitle">v6.0 设计文档 · 基于飞书文档 UDgUdPiSaoiYa2xMKWfcCt6WnJe 解析生成</div>
+
+<div class="summary-banner">
+  <p>一个从<strong class="highlight">唐朝科技水平</strong>起步、靠自己一步步长大的<strong class="highlight">微型文明</strong></p>
+  <p>18 人建镇 · 66 位角色 · 15 大系统 · <strong class="highlight">进步 ≠ 必然</strong></p>
+</div>
+
+<!-- Statistics -->
+<div class="stats">
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--green)">4/15</div>
+    <div class="stat-label">核心模块已实现</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--yellow)">2/15</div>
+    <div class="stat-label">模块部分实现</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--red)">9/15</div>
+    <div class="stat-label">模块未实现</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--accent)">33%</div>
+    <div class="stat-label">架构完成度</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--purple)">66</div>
+    <div class="stat-label">设计角色数</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--cyan)">50-70</div>
+    <div class="stat-label">Agent 生命周期(周)</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('modules')">📦 模块架构</button>
+  <button class="tab-btn" onclick="showTab('world')">🌍 世界设定</button>
+  <button class="tab-btn" onclick="showTab('world-start')">🏘️ 起始状态</button>
+  <button class="tab-btn" onclick="showTab('economy')">💰 经济系统</button>
+  <button class="tab-btn" onclick="showTab('society')">👥 社会系统</button>
+  <button class="tab-btn" onclick="showTab('innovation')">💡 创新体系</button>
+  <button class="tab-btn" onclick="showTab('timeline')">📜 时间线</button>
+  <button class="tab-btn" onclick="showTab('design')">📐 核心规则</button>
+</div>
+
+<!-- Tab: Modules -->
+<div id="tab-modules" class="tab-content active">
+  <div class="section-title">📦 模块架构一览</div>
+  
+  <div class="module-grid">
+    <!-- world/ -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">🌍 world/</span>
+        <span class="status-badge status-empty">未实现</span>
+      </div>
+      <div class="module-files">9 个文件 · 世界核心系统</div>
+      <div class="module-desc">管理世界状态、经济引擎、资源体系、建筑系统、创新依赖树、法律系统、文化节日、档案系统</div>
+      <div class="module-subitems">
+        <div class="module-subitem">world-engine.js — 世界状态管理</div>
+        <div class="module-subitem">building-system.js — 建筑/建造/升级 (Lv.1→Lv.5)</div>
+        <div class="module-subitem">economy-system.js — 经济引擎</div>
+        <div class="module-subitem">resource-system.js — 资源/物品体系</div>
+        <div class="module-subitem">inventory-system.js — 库存管理</div>
+        <div class="module-subitem">innovation-tree.js — 创新依赖树</div>
+        <div class="module-subitem">legislation-system.js — 法律系统</div>
+        <div class="module-subitem">culture-system.js — 文化/节日系统</div>
+        <div class="module-subitem">archive-system.js — 档案系统</div>
+        <div class="module-subitem">era-description.js — 时代描述</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:0%"></div></div>
+    </div>
+
+    <!-- agents/ -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">🤖 agents/</span>
+        <span class="status-badge status-progress">部分实现</span>
+      </div>
+      <div class="module-files">13 个文件 · Agent 行为引擎</div>
+      <div class="module-desc">角色定义、状态管理、行为决策、生命周期、关系/婚姻、雇佣系统、交易、创新尝试、群体、谣言、知识传承</div>
+      <div class="module-subitems">
+        <div class="module-subitem">character-defs.js — 角色定义</div>
+        <div class="module-subitem">agent-state.js — 状态系统 ✅</div>
+        <div class="module-subitem">agent-engine-v2.js — 引擎主循环 ✅</div>
+        <div class="module-subitem">agent-action.js — 行为决策 ❌</div>
+        <div class="module-subitem">lifecycle-system.js — 生命周期 ✅</div>
+        <div class="module-subitem">relationship-system.js — 关系/婚姻 ❌</div>
+        <div class="module-subitem">employment-system.js — 雇佣(师徒制) ❌</div>
+        <div class="module-subitem">trade-system.js — 交易 ✅</div>
+        <div class="module-subitem">innovation-system.js — 创新尝试 ❌</div>
+        <div class="module-subitem">knowledge-transfer.js — 知识传承(新增) ❌</div>
+        <div class="module-subitem">group-system.js — 自组织群体 ❌</div>
+        <div class="module-subitem">town-events.js — 事件 ❌</div>
+        <div class="module-subitem">rumor-mill.js — 谣言传播 ❌</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill fill-yellow" style="width:31%"></div></div>
+    </div>
+
+    <!-- config/ -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">⚙️ config/</span>
+        <span class="status-badge status-done">已完成</span>
+      </div>
+      <div class="module-files">9 个文件 · 纯数据配置</div>
+      <div class="module-desc">世界观常量、角色配置、技能定义、物品定义、价格表、科技树、事件池、世界地图</div>
+      <div class="module-subitems">
+        <div class="module-subitem">characters.js — 角色初始数据</div>
+        <div class="module-subitem">skills.js — 技能体系</div>
+        <div class="module-subitem">items.js — 物品体系</div>
+        <div class="module-subitem">prices.js — 价格系统</div>
+        <div class="module-subitem">tech-tree.js — 科技依赖树</div>
+        <div class="module-subitem">events-pool.js — 事件池</div>
+        <div class="module-subitem">world.js — 世界常量</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+    </div>
+
+    <!-- core/ -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">🔧 core/</span>
+        <span class="status-badge status-done">已完成</span>
+      </div>
+      <div class="module-files">4 个文件 · 基础设施</div>
+      <div class="module-desc">WorldEngine 核心引擎、SeedRandom 确定性随机数、EventBus 事件总线、类型定义</div>
+      <div class="module-subitems">
+        <div class="module-subitem">world-engine.js — 世界状态引擎</div>
+        <div class="module-subitem">rng.js — 种子随机数(可复现)</div>
+        <div class="module-subitem">event-bus.js — 事件总线</div>
+        <div class="module-subitem">types.js — TypeScript 类型定义</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+    </div>
+
+    <!-- economy/ -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">💰 economy/</span>
+        <span class="status-badge status-done">已完成</span>
+      </div>
+      <div class="module-files">1 个文件 · 经济系统</div>
+      <div class="module-desc">市场交易、货币流通(铜钱+白银)、以物易物、价格波动</div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+    </div>
+
+    <!-- innovation/ -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">💡 innovation/</span>
+        <span class="status-badge status-progress">部分实现</span>
+      </div>
+      <div class="module-files">1 个文件</div>
+      <div class="module-desc">创新引擎、技术检查器、发现机制</div>
+      <div class="progress-bar"><div class="progress-fill fill-yellow" style="width:30%"></div></div>
+    </div>
+
+    <!-- narrative/ -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">📜 narrative/</span>
+        <span class="status-badge status-empty">待集成</span>
+      </div>
+      <div class="module-files">2 个文件</div>
+      <div class="module-desc">chronicle-generator.js(周报) + festival-events.js(节日事件)</div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:0%"></div></div>
+    </div>
+
+    <!-- society/ -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">🏛️ society/</span>
+        <span class="status-badge status-empty">未实现</span>
+      </div>
+      <div class="module-files">0 个文件</div>
+      <div class="module-desc">法律制定流程、节日体系、群体形成、档案系统、知识传承</div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:0%"></div></div>
+    </div>
+
+    <!-- world/ (empty) -->
+    <div class="module-card">
+      <div class="module-header">
+        <span class="module-name">🗺️ world/</span>
+        <span class="status-badge status-empty">未实现</span>
+      </div>
+      <div class="module-files">0 个文件</div>
+      <div class="module-desc">地图、建筑系统、资源管理</div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: World Setting -->
+<div id="tab-world" class="tab-content">
+  <div class="section-title">🌍 世界设定</div>
+  
+  <div class="design-card">
+    <h3>⏱️ 时间框架</h3>
+    <p><strong>现实 1 周 = 游戏 1 年</strong></p>
+    <ul>
+      <li>出生 → 0 岁</li>
+      <li>儿童(认字) → 5-6 岁 = 5-6 周</li>
+      <li>少年(学徒) → 13 岁 ≈ 3 个月</li>
+      <li>成年 → 16-18 岁 = 4-4.5 个月</li>
+      <li>中年 → 40 岁 ≈ 10 个月</li>
+      <li>老年 → 55+ 岁 ≈ 1 年以上</li>
+      <li>Agent 一生 ≈ 50-70 周</li>
+    </ul>
+    <p style="margin-top:0.5rem"><strong style="color:var(--yellow)">关键：文明进步要跨代。</strong> 每一代种树、下一代浇水、第三代才收获。</p>
+  </div>
+
+  <div class="design-card">
+    <h3>🔬 技术起点：唐朝水平</h3>
+    <p style="margin-bottom:0.5rem"><strong style="color:var(--green)">✅ 已具备</strong></p>
+    <ul>
+      <li>木结构建筑、榫卯、夯土墙、瓦顶</li>
+      <li>铁制农具/厨具（菜刀、铁锅、犁头）</li>
+      <li>手拉风箱、铁砧锻造</li>
+      <li>毛笔、墨、纸</li>
+      <li>水井打水、竹管引水</li>
+      <li>油灯、蜡烛、火把</li>
+      <li>中医——脉诊、草药、针灸</li>
+      <li>指南针、罗盘、简单天文观测</li>
+      <li>水车、雕版印刷知识</li>
+      <li>火药（炼丹偶得，非武器化）</li>
+    </ul>
+    <p style="margin-top:0.75rem"><strong style="color:var(--red)">❌ 需要发明</strong></p>
+    <ul>
+      <li>电力、发电机、电灯</li>
+      <li>照相机、摄影术</li>
+      <li>自行车、内燃机、汽车</li>
+      <li>现代医学（手术、抗生素、X光）</li>
+      <li>自来水管道系统</li>
+      <li>电报、电话、无线电</li>
+      <li>计算机、互联网</li>
+      <li>活字印刷</li>
+      <li>现代化学工业、枪械</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Tab: Starting State -->
+<div id="tab-world-start" class="tab-content">
+  <div class="section-title">🏘️ 18 人建镇 · 角色设定</div>
+  
+  <div class="char-grid">
+    <div class="char-card">
+      <div class="char-name">老王</div>
+      <div class="char-title">客栈老板 · 52岁</div>
+      <div class="char-detail">楼下茶馆楼上客房，茶5文/壶、米酒3文/碗。特长：会看人脸色、记得住常客喜好。有一匹马，偶尔借给陈小飞跑远路。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">小野</div>
+      <div class="char-title">画师 · 28岁</div>
+      <div class="char-detail">工笔人物/山水写生，10文一幅。读过《墨经》，知道小孔成像原理——这是日后研究光学的基础。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">小林</div>
+      <div class="char-title">巧手工匠 · 26岁</div>
+      <div class="char-detail">木工/机械拆装。读过《考工记》《墨子》。正在尝试做更省力的鼓风机。擅长修一切东西。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">陈大江</div>
+      <div class="char-title">面摊主 · 48岁</div>
+      <div class="char-detail">手擀面 7 文/碗。夏天气候热汤面卖不动，雨天没生意。陈秀兰的丈夫，陈小飞的父亲。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">陈秀兰</div>
+      <div class="char-title">面摊老板娘 · 45岁</div>
+      <div class="char-detail">用算盘收钱、手写记账。记忆力惊人——谁赊了账从不搞错。镇上消息集散中心。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">陈小飞</div>
+      <div class="char-title">跑腿信使 · 20岁</div>
+      <div class="char-detail">本镇3文/趟，邻镇15文/趟。认识全镇每一个人的住处和近道。一双布鞋+一个搭裢布袋。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">周建国</div>
+      <div class="char-title">塾师 · 66岁</div>
+      <div class="char-detail">教识字+算术，束脩200文/月。爱好钓鱼+每天写日记（小镇最早的文���）。⚠️ 高血压。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">王秀芝</div>
+      <div class="char-title">接生婆/护理 · 63岁</div>
+      <div class="char-detail">接生+简单外伤处理。白若兰看病有时也会请教她。⚠️ 关节炎。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">周晓月</div>
+      <div class="char-title">塾师助手/文书 · 30岁</div>
+      <div class="char-detail">周建国之女。楷书一流，负责抄写所有正式文书。知书达理，未婚。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">张大山</div>
+      <div class="char-title">铁匠 · 46岁</div>
+      <div class="char-detail">菜刀50文、锄头35文、犁头80文。土炉+手拉风箱+铁砧。⚠️ 听力下降。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">王翠花</div>
+      <div class="char-title">种花人/菜农 · 43岁</div>
+      <div class="char-detail">可观赏的花+可入药的花+蔬菜。从公共水井挑水浇灌，一天十几趟。卖花给客栈、苏灵儿、小野。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">张武</div>
+      <div class="char-title">体力工/搬运 · 23岁</div>
+      <div class="char-detail">全镇力气最大。帮码头卸货、帮搬面粉/铁料/木料。一单做一单，无固定收入。直爽、嗓门大。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">白若兰</div>
+      <div class="char-title">女医 · 32岁</div>
+      <div class="char-detail">脉诊+针灸+开方。诊金20文/次。镇上唯一受过系统医学训练的人。⚠️ 没有听诊器/体温计/手术条件。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">苏灵儿</div>
+      <div class="char-title">采药人/卜者 · 25岁</div>
+      <div class="char-detail">认草药+采药+炮制。卖草药给白若兰 + 乌龟壳占卜。古灵精怪，小镇"心理按摩师"。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">陈志杰</div>
+      <div class="char-title">更夫/巡夜 · 33岁</div>
+      <div class="char-detail">铜锣+木梆+灯笼。防火防盗劝架。由赵长河向各户收钱（每户10文/月）。⚠️ 左肩老伤。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">林美琪</div>
+      <div class="char-title">温泉管事 · 27岁</div>
+      <div class="char-detail">天然地热泉眼，含硫磺。3文/次。露天，下雨天没法泡。温柔、耐心、爱干净。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">赵长河</div>
+      <div class="char-title">里正 · 54岁</div>
+      <div class="char-detail">管理户籍、调解纠纷、组织公益、对外联络。没薪水，靠威望。一本手写"桃源户籍册"。⚠️ 轻度脂肪肝。</div>
+    </div>
+    <div class="char-card">
+      <div class="char-name">马秀英</div>
+      <div class="char-title">里正娘子/社区后勤 · 52岁</div>
+      <div class="char-detail">大锅饭、操持红白事、调解妇女口角、照顾生病邻居。热心肠、嗓门大、镇上的"妈"。</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Economy -->
+<div id="tab-economy" class="tab-content">
+  <div class="section-title">💰 经济系统</div>
+  
+  <div class="design-card">
+    <h3>🪙 货币体系</h3>
+    <ul>
+      <li>铜钱（文）为主，白银（两）为辅</li>
+      <li>1 文 = 一块饼/一碗茶</li>
+      <li>50 文 = 一把菜刀</li>
+      <li>100 文 = 一天参考工价</li>
+      <li>1 两银 = 1000 文（有浮动）</li>
+    </ul>
+    <p style="margin-top:0.5rem"><strong style="color:var(--yellow)">铜钱总量有限</strong>——如果大家都存着不花，市面上就没钱，驱动以物易物和信用创新。</p>
+  </div>
+  
+  <div class="design-card">
+    <h3>🔄 交易方式</h3>
+    <ul>
+      <li><strong>当面交易</strong>：掏出铜钱数，或讨价还价</li>
+      <li><strong>以物易物</strong>：两条鱼换三碗面</li>
+      <li><strong>赊账</strong>：熟人社会，靠信用（<100文口头，>500文要写借条+按手印+赵长河见证）</li>
+      <li><strong>信用破产</strong>：全镇知道不守信用 → 以后没人愿意交易</li>
+    </ul>
+  </div>
+
+  <div class="design-card">
+    <h3>📈 经济进步方向</h3>
+    <ul>
+      <li>商品种类增加（新发明→新可卖品）</li>
+      <li>信用/借贷制度化（纸上按手印）</li>
+      <li>纸币（极后期——需要造纸术+印刷术+社会信任）</li>
+      <li>经济学意义上的"市场"从以物易物演化到复杂体系</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Tab: Society -->
+<div id="tab-society" class="tab-content">
+  <div class="section-title">👥 社会系统</div>
+  
+  <div class="design-card">
+    <h3>🤝 关系系统</h3>
+    <ul>
+      <li>关系值 0-100（陌生→相识→结婚）</li>
+      <li>好感：买东西多聊两句、路上打招呼、帮忙捎带东西、茶馆同桌、节日一起活动</li>
+      <li>恋爱：频繁串门、别人议论、托共同朋友传话、托媒人提亲（赵长河/马秀英常当媒人）</li>
+    </ul>
+  </div>
+
+  <div class="design-card">
+    <h3>🏥 健康系统（唐朝条件）</h3>
+    <p><strong style="color:var(--red)">可能致命</strong>：伤口感染/败血症、难产及产后并发症、肺炎/肺结核、痢疾/食物中毒、高血压→中风</p>
+    <p><strong>常见非致命</strong>：关节炎、听力/视力衰退、腰腿痛、皮肤病、牙痛</p>
+    <p><strong>改善方法</strong>：清洁水源→减少痢疾、消毒方法→降低感染、营养改善、保存技术、诊断工具</p>
+    <p style="margin-top:0.5rem"><strong style="color:var(--orange)">生育风险：难产 5-10%（vs 现代<1%），新生儿存活 85%（vs 现代>99%）</strong></p>
+  </div>
+
+  <div class="design-card">
+    <h3>📝 雇佣关系</h3>
+    <ul>
+      <li><strong>学徒制（长期）</strong>：拜师仪式→三年出师（3周）→管吃管住→年底辛苦钱</li>
+      <li><strong>短工/日结（临时）</strong>：帮忙半天→10文+管饭，口头说定</li>
+      <li>未来演化：固定工资→劳动合同→工资纠纷→调解→惯例→法律</li>
+    </ul>
+  </div>
+
+  <div class="design-card">
+    <h3>⚖️ 法律系统</h3>
+    <p>法律从问题中自然生长，不是强加的：</p>
+    <ul>
+      <li>口头共识 → 贴在社区大屋门口 → 赵长河册子里的"公约" → 正式法律册子 → 印刷品</li>
+      <li>第一条交通规则的诞生：陈小飞差点撞到周奶奶 → "大家说好了在街上了慢点走"</li>
+    </ul>
+  </div>
+
+  <div class="design-card">
+    <h3>🎉 文化与节日</h3>
+    <p><strong>继承了什么</strong>：语言文字、伦理观念、历法知识、基础礼仪、姓氏和家庭观念、师徒关系</p>
+    <p><strong>需要自己创造</strong>：社区节日、庆祝方式、历史记忆、特产、特有仪式、价值观排序</p>
+    <p style="margin-top:0.5rem"><strong>节日诞生规则</strong>：有人提议 → 有组织者（赵长河/马秀英/周建国） → 40%+参与 → 连续3年 → 成为传统</p>
+  </div>
+
+  <div class="design-card">
+    <h3>👥 自组织群体</h3>
+    <ul>
+      <li>"码头钓鱼帮"——周建国牵头</li>
+      <li>"茶摊闲聊圈"——老王茶馆的常客</li>
+      <li>"力气活互助组"</li>
+      <li>"育儿互助"</li>
+    </ul>
+    <p style="margin-top:0.3rem">形成规则：3+人定期做同一件事 → 持续5年以上 → 默认召集人</p>
+  </div>
+</div>
+
+<!-- Tab: Innovation -->
+<div id="tab-innovation" class="tab-content">
+  <div class="section-title">💡 创新与创造</div>
+  
+  <div class="design-card">
+    <h3>🔨 创新分类</h3>
+    <div class="tech-categories">
+      <div class="tech-cat">
+        <h4>改良型创新（Lv.3+）</h4>
+        <ul>
+          <li><span class="tech-check">✓</span> 面里多放一种配料</li>
+          <li><span class="tech-check">✓</span> 风箱加阀门 → 风更大</li>
+          <li><span class="tech-check">✓</span> 井口加辘轳 → 打水省力</li>
+          <li><span class="tech-check">✓</span> 炉灶加烟道 → 屋里烟少</li>
+        </ul>
+      </div>
+      <div class="tech-cat">
+        <h4>原理型创新（Lv.5+）</h4>
+        <ul>
+          <li><span class="tech-x">✗</span> 电磁感应 → 发电机</li>
+          <li><span class="tech-x">✗</span> 感光材料 → 摄影术</li>
+          <li><span class="tech-x">✗</span> 蒸汽压力 → 蒸汽机</li>
+          <li><span class="tech-x">✗</span> 细菌理论 → 现代医学</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="design-card">
+    <h3>📚 跨代知识传承</h3>
+    <p>知识不会自动传承。一项发明若<strong style="color:var(--red)">没有至少一种</strong>传承方式，将随发明者去世而失传：</p>
+    <ul>
+      <li><strong>文字记录</strong>——周建国的日记、小林的实验笔记</li>
+      <li><strong>师徒传授</strong>——张大山带徒弟打铁</li>
+      <li><strong>实物遗存</strong>——小林留下的发电机原型</li>
+      <li><strong>集体记忆</strong>——"陈老爷爷当年点亮过一盏灯"</li>
+    </ul>
+  </div>
+
+  <div class="design-card">
+    <h3>🏗️ 建筑升级规则</h3>
+    <p>建筑不能凭空升级，需要 <strong>材料 + 人工 + 技术</strong> 三要素：</p>
+    <ul>
+      <li>Lv.1 → Lv.2：积累木材和人工</li>
+      <li>Lv.2 → Lv.3：引入新材料（砖/玻璃）</li>
+      <li>Lv.3 → Lv.4：可能引入电力</li>
+      <li>Lv.4 → Lv.5：全面现代化</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Tab: Timeline -->
+<div id="tab-timeline" class="tab-content">
+  <div class="section-title">📜 文明演进示例</div>
+  
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-year">第 1 年</div>
+      <div class="timeline-text">18人建镇。赵长河写完第一版户籍册。黄土路主街，灰瓦木梁，一口公共水井。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">第 3 年</div>
+      <div class="timeline-text">第一次"岁集"：马秀英提议过年一起吃饭。以后每年如此——第一个"传统"。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">第 8 年</div>
+      <div class="timeline-text">周建国去世。陈大江提议每年今日到码头放河灯。每年都有人记得。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">第 15 年</div>
+      <div class="timeline-text">小林在多次失败后，点亮了第一盏（很暗的）电灯。烧断了，但记下了实验过程。这卷笔记后来被孙子发现。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">第 30 年</div>
+      <div class="timeline-text">第一代陆续老去。第二代开始当家。小林留下的笔记被找到，继续研究。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">第 50 年</div>
+      <div class="timeline-text">第三代人出现。舒适度提高了（房子翻修过、手艺熟练了），但不一定有重大发明。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">第 100 年</div>
+      <div class="timeline-text">没有标准答案。可能已有电灯和相机，可能还在用油灯——这很正常。没有电也可以是一个好小镇。</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Design Rules -->
+<div id="tab-design" class="tab-content">
+  <div class="section-title">📐 13 条核心规则</div>
+  
+  <div class="rules-grid">
+    <div class="rule-item"><span class="rule-num">1.</span><span>技术起点 = 唐朝水平（铁器、纸笔、水车、中医、木结构）。需要被发明的：电、相机、机器、现代医学…</span></div>
+    <div class="rule-item"><span class="rule-num">2.</span><span>文化继承 = 语言文字/历法/伦理。需要自创的：节日/仪式/特产/价值观/历史记忆。</span></div>
+    <div class="rule-item"><span class="rule-num">3.</span><span>进步 ≠ 必然。没有人创造，就停在原样。</span></div>
+    <div class="rule-item"><span class="rule-num">4.</span><span>进步跨代。这一代人种树，下一代人可能吃不到果子。</span></div>
+    <div class="rule-item"><span class="rule-num">5.</span><span>依赖关系不能跳步。要有电灯，先有电；要有电，先有发电机。</span></div>
+    <div class="rule-item"><span class="rule-num">6.</span><span>创新有失败概率。失败很正常，浪费材料很正常。</span></div>
+    <div class="rule-item"><span class="rule-num">7.</span><span>知识需要传承。不留文字、不教徒弟，就会失传。</span></div>
+    <div class="rule-item"><span class="rule-num">8.</span><span>经济总量有限。铜钱就这么多，花完需要时间回流。</span></div>
+    <div class="rule-item"><span class="rule-num">9.</span><span>死亡更常见。没有现代医学，高寿不容易。</span></div>
+    <div class="rule-item"><span class="rule-num">10.</span><span>法律从问题中长。先有摩擦，后有规则。</span></div>
+    <div class="rule-item"><span class="rule-num">11.</span><span>节日是被"过"出来的。同一个事做三次才叫传统。</span></div>
+    <div class="rule-item"><span class="rule-num">12.</span><span>档案不是预设的。赵长河一本册子写了很多年。</span></div>
+    <div class="rule-item"><span class="rule-num">13.</span><span>没有什么是标准答案。可能100周后小镇也没电——那也很正常。</span></div>
+  </div>
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Animate progress bars on load
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.progress-fill').forEach(bar => {
+    const w = bar.style.width;
+    bar.style.width = '0%';
+    setTimeout(() => bar.style.width = w, 300);
+  });
+});
+</script>
+
+</body>
+</html>

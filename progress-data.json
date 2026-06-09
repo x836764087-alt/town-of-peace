@@ -1,0 +1,144 @@
+{
+  "scannedAt": "2026-06-09T09:50:00.000Z",
+  "overall": {
+    "pct": 65,
+    "sourceFiles": 27,
+    "expectedFiles": 43,
+    "loc": 8523,
+    "compileErrors": 0,
+    "test": {
+      "passed": 207,
+      "total": 207,
+      "files": 12,
+      "ok": true
+    },
+    "modulesImplemented": 10,
+    "modulesTotal": 9,
+    "emptyDirs": []
+  },
+  "modules": [
+    {
+      "name": "config/",
+      "weight": 10,
+      "expected": 9,
+      "present": 9,
+      "presentFiles": [
+        "characters", "events-pool", "innovation-tree", "items",
+        "prices", "resource-system", "skills", "tech-tree", "world"
+      ],
+      "missingFiles": [],
+      "extraFiles": [],
+      "pct": 100,
+      "loc": 1330,
+      "absPct": 100,
+      "desc": "7 个配置文件 + 类型约束"
+    },
+    {
+      "name": "core/",
+      "weight": 12,
+      "expected": 4,
+      "present": 4,
+      "presentFiles": ["event-bus", "rng", "types", "world-engine"],
+      "missingFiles": [],
+      "extraFiles": [],
+      "pct": 100,
+      "loc": 941,
+      "absPct": 100,
+      "desc": "世界引擎 · 种子RNG · EventBus · 类型系统"
+    },
+    {
+      "name": "agents/",
+      "weight": 20,
+      "expected": 8,
+      "present": 5,
+      "presentFiles": [
+        "agent-factory", "lifecycle-system", "knowledge-transfer",
+        "trade-system", "dialogue-topics"
+      ],
+      "missingFiles": ["rumor-mill", "group-system", "town-events"],
+      "extraFiles": [],
+      "pct": 62.5,
+      "loc": 1899,
+      "absPct": 62.5,
+      "desc": "Agent 工厂 · 生命周期 · 交易 · 对话 · 谣言 · 群体 · 事件"
+    },
+    {
+      "name": "economy/",
+      "weight": 12,
+      "expected": 5,
+      "present": 2,
+      "presentFiles": ["currency", "employment-system"],
+      "missingFiles": ["market", "inventory", "trade"],
+      "extraFiles": [],
+      "pct": 40,
+      "loc": 1054,
+      "absPct": 40,
+      "desc": "货币 · 雇佣 · 市场 · 库存 · 交易"
+    },
+    {
+      "name": "world/",
+      "weight": 10,
+      "expected": 4,
+      "present": 4,
+      "presentFiles": ["buildings", "map", "resources", "seasons"],
+      "missingFiles": [],
+      "extraFiles": [],
+      "pct": 100,
+      "loc": 492,
+      "absPct": 100,
+      "desc": "资源 · 季节 · 地图 · 建筑系统"
+    },
+    {
+      "name": "society/",
+      "weight": 14,
+      "expected": 5,
+      "present": 1,
+      "presentFiles": ["laws"],
+      "missingFiles": ["festivals", "groups", "archives", "knowledge-transfer"],
+      "extraFiles": [],
+      "pct": 20,
+      "loc": 0,
+      "absPct": 20,
+      "desc": "法律 · 节日 · 群体 · 档案 · 知识传承"
+    },
+    {
+      "name": "innovation/",
+      "weight": 8,
+      "expected": 3,
+      "present": 1,
+      "presentFiles": ["innovation-tree"],
+      "missingFiles": ["tech-checker", "discoveries"],
+      "extraFiles": [],
+      "pct": 33,
+      "loc": 363,
+      "absPct": 33,
+      "desc": "创新树 · 技术前提检测 · 发现事件"
+    },
+    {
+      "name": "narrative/",
+      "weight": 8,
+      "expected": 4,
+      "present": 1,
+      "presentFiles": ["chronicle-generator"],
+      "missingFiles": ["chronicle", "event-emitter", "templates"],
+      "extraFiles": [],
+      "pct": 25,
+      "loc": 0,
+      "absPct": 25,
+      "desc": "镇志生成 · 事件叙事化 · 模板库"
+    },
+    {
+      "name": "index.ts",
+      "weight": 6,
+      "expected": 1,
+      "present": 1,
+      "presentFiles": ["index"],
+      "missingFiles": [],
+      "extraFiles": [],
+      "pct": 100,
+      "loc": 410,
+      "absPct": 100,
+      "desc": "主循环 · CLI · 存档"
+    }
+  ]
+}

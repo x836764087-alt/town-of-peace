@@ -1,0 +1,61 @@
+/**
+ * Skill definitions for the Town of Peace.
+ * Each skill has an ID and a display name.
+ */
+export interface SkillDef {
+  id: string;
+  name: string;
+}
+
+export const SKILLS: Record<string, SkillDef> = {
+  leadership: { id: 'leadership', name: '领导力' },
+  farming: { id: 'farming', name: '农耕' },
+  negotiation: { id: 'negotiation', name: '谈判' },
+  literacy: { id: 'literacy', name: '识字' },
+  brewing: { id: 'brewing', name: '酿酒' },
+  strength: { id: 'strength', name: '力量' },
+  trading: { id: 'trading', name: '贸易' },
+  weaving: { id: 'weaving', name: '织布' },
+  sewing: { id: 'sewing', name: '缝纫' },
+  gardening: { id: 'gardening', name: '园艺' },
+  blacksmithing: { id: 'blacksmithing', name: '打铁' },
+  mining: { id: 'mining', name: '采矿' },
+  repair: { id: 'repair', name: '修理' },
+  'tea-picking': { id: 'tea-picking', name: '采茶' },
+  dancing: { id: 'dancing', name: '舞蹈' },
+  singing: { id: 'singing', name: '唱歌' },
+  medicine: { id: 'medicine', name: '医术' },
+  herbology: { id: 'herbology', name: '草药' },
+  diagnosis: { id: 'diagnosis', name: '诊断' },
+  cooking: { id: 'cooking', name: '烹饪' },
+  baking: { id: 'baking', name: '烘焙' },
+  management: { id: 'management', name: '管理' },
+  hunting: { id: 'hunting', name: '狩猎' },
+  tracking: { id: 'tracking', name: '追踪' },
+  archery: { id: 'archery', name: '射箭' },
+  survival: { id: 'survival', name: '生存' },
+  floristry: { id: 'floristry', name: '花艺' },
+  teaching: { id: 'teaching', name: '教学' },
+  calligraphy: { id: 'calligraphy', name: '书法' },
+  history: { id: 'history', name: '历史' },
+  accounting: { id: 'accounting', name: '算账' },
+  appraisal: { id: 'appraisal', name: '鉴定' },
+  'tofu-making': { id: 'tofu-making', name: '做豆腐' },
+  carpentry: { id: 'carpentry', name: '木工' },
+  woodworking: { id: 'woodworking', name: '木匠活' },
+  building: { id: 'building', name: '建造' },
+  design: { id: 'design', name: '设计' },
+  painting: { id: 'painting', name: '绘画' },
+  observation: { id: 'observation', name: '观察' },
+  'fortune-telling': { id: 'fortune-telling', name: '算命' },
+  astronomy: { id: 'astronomy', name: '天文' },
+  rhetoric: { id: 'rhetoric', name: '口才' },
+  tailoring: { id: 'tailoring', name: '裁缝' },
+  embroidery: { id: 'embroidery', name: '刺绣' },
+  fishing: { id: 'fishing', name: '捕鱼' },
+  swimming: { id: 'swimming', name: '游泳' },
+  'boat-building': { id: 'boat-building', name: '造船' },
+  matchmaking: { id: 'matchmaking', name: '说媒' },
+  socializing: { id: 'socializing', name: '社交' },
+  gossip: { id: 'gossip', name: '八卦' },
+};
