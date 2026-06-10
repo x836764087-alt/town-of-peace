@@ -11,7 +11,7 @@
  * 5. 法律演变（过时法律可能被废除）
  */
 
-import type { WorldState, Law } from '../core/types.js';
+import type { WorldState, Law, AgentState } from '../core/types.js';
 import { SeededRNG } from '../core/rng.js';
 import { EVENTS, EventBus } from '../core/event-bus.js';
 
@@ -78,6 +78,12 @@ export const LAW_OBSOLESCENCE_WEEKS = 50;
 /** 最高法律数量 */
 export const MAX_LAWS = 10;
 
+/** 苦役折算季度（每年 4 季，苦役 1 年 = 4 季） */
+const LABOUR_SERVICE_QUARTERS = 4;
+
+/** 默认里正（赵长河）的 agent id */
+const TOWN_LEADER_ID = 'zhao-changhe';
+
 /** 默认执法者（根据社区领袖判断） */
 export function findEnforcer(state: WorldState): string | undefined {
   // 优先找治安相关技能的居民
@@ -85,6 +91,25 @@ export function findEnforcer(state: WorldState): string | undefined {
     a.alive && a.age >= 18 && (a.skills.leadership ?? 0) > 40,
   ).sort((a, b) => (b.skills.leadership ?? 0) - (a.skills.leadership ?? 0));
   return candidates[0]?.id;
+}
+
+/** 获取审判官：优先里正，其次找最高 leadership 的活着的成年居民 */
+function findJudge(state: WorldState): AgentState | undefined {
+  const aliveAdults = state.agents.filter(a => a.alive && a.age >= 18);
+  if (aliveAdults.length === 0) return undefined;
+  // 优先赵长河
+  const judge = aliveAdults.find(a => a.id === TOWN_LEADER_ID);
+  if (judge) return judge;
+  // 否则找最高 leadership
+  aliveAdults.sort((a, b) => (b.skills.leadership ?? 0) - (a.skills.leadership ?? 0));
+  return aliveAdults[0];
+}
+
+/** 审判判决 */
+export interface TrialJudgment {
+  verdict: 'fine' | 'labour' | 'exile';
+  fine: number;
+  narrative: string;
 }
 
 // ─── 法律管理器 ────────────────────────
@@ -123,7 +148,11 @@ export class LawSystem {
 
       // 人口要求 + 概率检查
       if (aliveCount < concern.minPopulation) continue;
-      if (!this.rng.chance(concern.triggerChance)) continue;
+
+      // 犯罪潮影响：crimeWave 每 10 点增加 50% 触发概率
+      const crimeBoost = 1 + (this.state.crimeWave ?? 0) / 20;
+      const adjustedChance = Math.min(1, concern.triggerChance * crimeBoost);
+      if (!this.rng.chance(adjustedChance)) continue;
 
       // 找提案人
       const proposer = this.state.agents.filter(a => a.alive && a.age >= 18)
@@ -132,6 +161,10 @@ export class LawSystem {
 
       // 提案
       this.proposedLaws.add(concern.id);
+      // 如果这是公共安全法，清除 pending 标记
+      if (concern.id === 'public_safety') {
+        this.state.pendingPublicOrderLaw = false;
+      }
       this.enactLaw(concern, proposer.id);
       events.push(`${proposer.name}提议制定「${concern.lawName}」：${concern.lawDescription}`);
     }
@@ -204,6 +237,68 @@ export class LawSystem {
     }
 
     return events;
+  }
+
+  /**
+   * 审判流程：里正主持，根据犯罪次数判罚。
+   * @param thiefId 被抓住的犯案者
+   * @param victimId 受害者
+   */
+  conductTrial(thiefId: string, victimId: string): TrialJudgment {
+    const thief = this.state.agents.find(a => a.id === thiefId);
+    const victim = this.state.agents.find(a => a.id === victimId);
+    const judge = findJudge(this.state);
+
+    if (!thief || !victim) {
+      return { verdict: 'fine', fine: 0, narrative: '无法审判' };
+    }
+
+    const judgeName = judge?.name ?? '里正';
+
+    // 累加犯罪次数
+    thief.crimes = (thief.crimes ?? 0) + 1;
+
+    // 社会关系影响：受害者/审判官与犯案者的关系越好，判罚越轻
+    const victimRelation = victim.relationships[thiefId] ?? 0;
+    const judgeRelation = judge?.relationships?.[thiefId] ?? 0;
+    const favorMod = Math.max(0.5, 1 - (Math.max(victimRelation, judgeRelation) / 100));
+
+    if (thief.crimes >= 3) {
+      // 3次+ → 驱逐
+      thief.alive = false;
+      thief.causeOfDeath = 'exiled';
+      const msg = `${judgeName}宣判：${thief.name}屡教不改（第${thief.crimes}次犯案），驱逐出镇！`;
+      return { verdict: 'exile', fine: 0, narrative: msg };
+    }
+
+    if (thief.crimes >= 2) {
+      // 2次 → 苦役 1 年
+      if (!thief.tags) thief.tags = [];
+      if (!thief.tags.includes('labour_service')) {
+        thief.tags.push('labour_service');
+      }
+      // 苦役影响：幸福感大幅降低
+      thief.stats.happiness = Math.max(0, (thief.stats.happiness ?? 50) - 30);
+      const msg = `${judgeName}宣判：${thief.name}再犯（第${thief.crimes}次），判苦役一年！`;
+      return { verdict: 'labour', fine: 0, narrative: msg };
+    }
+
+    // 首次 → 罚款（受关系影响）
+    const baseFine = this.rng.int(30, 50);
+    const fine = Math.round(baseFine * favorMod);
+    const canPay = thief.wealth >= fine;
+    if (canPay) {
+      thief.wealth -= fine;
+      this.state.economy.totalCurrency += fine;
+    } else {
+      // 无力支付则记债，转为口头警告
+      thief.wealth = Math.max(0, thief.wealth - fine / 2);
+    }
+    const fineMsg = canPay
+      ? `${thief.name}缴纳了 ${fine} 文罚款。`
+      : `${thief.name}无力支付 ${fine} 文罚款，减半缴纳 ${Math.round(fine/2)} 文。`;
+    const msg = `${judgeName}宣判：${thief.name}偷窃罪成立（第1次犯案），${fineMsg}`;
+    return { verdict: 'fine', fine, narrative: msg };
   }
 
   /**

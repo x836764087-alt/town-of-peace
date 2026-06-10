@@ -13,7 +13,7 @@ import type { InnovationNode } from '../config/innovation-tree.js';
 // ─── 常量 ────────────────────────────────────────
 
 /** 每季最多发现事件数 */
-export const MAX_DISCOVERIES_PER_TICK = 2;
+export const MAX_DISCOVERIES_PER_TICK = 1;
 
 /** 发现新品种时的品质分布 */
 const DISCOVERY_QUALITIES = ['粗糙', '普通', '精良', '稀有'] as const;
@@ -36,9 +36,9 @@ export class DiscoveryEvents {
     const events: string[] = [];
     let count = 0;
 
-    // 找有研究能力的 Agent（intelligence >= 4）
+    // 找有研究能力的 Agent（intelligence >= 30）
     const researchers = this.state.agents.filter(
-      a => a.alive && a.age >= 16 && a.stats.intelligence >= 4,
+      a => a.alive && a.age >= 16 && a.stats.intelligence >= 30,
     );
     if (researchers.length === 0) return events;
 
@@ -80,13 +80,12 @@ export class DiscoveryEvents {
     const weights = candidates.map(n => n.probability * 100);
     const target = this.rng.weightedPick(candidates, weights);
 
-    // 技能等级检查
-    const skillLevel = agent.stats.intelligence;
+    // 技能等级检查（intelligence 0-100 → 映射到 skillThreshold 3-9 标尺）
+    const skillLevel = Math.floor(agent.stats.intelligence / 10);
     if (skillLevel < target.skillThreshold) return undefined;
 
-    // 成功还是失败（钳制到 0–1 范围）
-    const effectiveProb = Math.min(target.probability * (1 + skillLevel * 0.05), 1);
-    const success = this.rng.chance(effectiveProb);
+    // 成功判定：直接用基础概率，无智力倍增
+    const success = this.rng.chance(target.probability);
 
     const agentName = agent.title ? `${agent.name}（${agent.title}）` : agent.name;
 
@@ -106,7 +105,7 @@ export class DiscoveryEvents {
     } else {
       // 尝试失败但有收获
       if (this.rng.chance(0.3)) {
-        agent.stats.intelligence = Math.min(20, agent.stats.intelligence + 1);
+        agent.stats.intelligence = Math.min(100, agent.stats.intelligence + 1);
         return `${agentName}尝试研究「${target.name}」未成功，但增长了见识。`;
       }
       return undefined;
@@ -120,7 +119,7 @@ export class DiscoveryEvents {
     const agent = this.state.agents.find(a => a.id === agentId);
     if (!agent) return '未知';
 
-    const int = agent.stats.intelligence;
+    const int = Math.floor(agent.stats.intelligence / 10);
     if (int >= 8) return '天赋异禀';
     if (int >= 6) return '聪慧过人';
     if (int >= 4) return '资质平平';

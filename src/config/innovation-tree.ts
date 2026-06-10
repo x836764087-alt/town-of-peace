@@ -45,6 +45,8 @@ export interface InnovationNode {
   tier: TechTier;
   /** 解锁的新物品/建筑类型 */
   unlocks: string[];
+  /** 世界被动效果 — 研究后持续生效 */
+  effects: { type: string; value: number }[];
 }
 
 /** 全部 16 项技术节点的配置数据 */
@@ -62,6 +64,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.6,
     tier: 'improvement',
     unlocks: ['bellows_improved', 'iron_quality_boost'],
+    effects: [{ type: 'building_efficiency', value: 1.15 }],
   },
 
   /** 2. 井口辘轳 — 辘轳提水省力 */
@@ -75,6 +78,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.6,
     tier: 'improvement',
     unlocks: ['well_winch_device', 'water_access_boost'],
+    effects: [{ type: 'food_production', value: 1.1 }],
   },
 
   /** 3. 炉灶烟道 — 烟道减少室内烟 */
@@ -88,6 +92,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.5,
     tier: 'improvement',
     unlocks: ['flue_stove', 'indoor_air_quality_up'],
+    effects: [{ type: 'health_recovery', value: 1.1 }],
   },
 
   /** 4. 面条配料 — 多放配料更好吃 */
@@ -101,6 +106,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.8,
     tier: 'improvement',
     unlocks: ['noodle_deluxe', 'food_happiness_up'],
+    effects: [{ type: 'food_production', value: 1.2 }],
   },
 
   /** 5. 砖烧制 — 烧砖替代夯土 */
@@ -114,6 +120,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.4,
     tier: 'improvement',
     unlocks: ['brick_production', 'construction_quality_up'],
+    effects: [{ type: 'building_efficiency', value: 1.1 }],
   },
 
   /** 6. 玻璃制作 — 沙子烧制成玻璃 */
@@ -127,6 +134,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.3,
     tier: 'improvement',
     unlocks: ['glass', 'glassware', 'lens'],
+    effects: [{ type: 'archive_capacity', value: 1.5 }],
   },
 
   /** 7. 酱油工业化 — 稳定酱油醋生产 */
@@ -140,6 +148,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.5,
     tier: 'improvement',
     unlocks: ['soy_sauce', 'vinegar', 'seasoning_pack'],
+    effects: [{ type: 'food_production', value: 1.15 }],
   },
 
   /** 9. 基础医学 — 总结常见医疗经验 */
@@ -153,6 +162,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.5,
     tier: 'improvement',
     unlocks: ['herbal_remedies', 'basic_treatment', 'surgery_basic'],
+    effects: [{ type: 'health_recovery', value: 1.3 }],
   },
 
   /** 10. 织布机改良 — 提高织布效率 */
@@ -166,6 +176,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.5,
     tier: 'improvement',
     unlocks: ['loom_improved', 'cloth_quality_up', 'fine_cloth'],
+    effects: [{ type: 'building_efficiency', value: 1.1 }],
   },
 
   // === 原理型创新 (skillThreshold 5-9) ===
@@ -181,6 +192,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.1,
     tier: 'principle',
     unlocks: ['electromagnet', 'wire', 'electric_generator'],
+    effects: [{ type: 'building_efficiency', value: 1.3 }],
   },
 
   /** 12. 蒸汽机 — 蒸汽压力转化为机械能 */
@@ -194,6 +206,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.08,
     tier: 'principle',
     unlocks: ['steam_engine', 'steam_pump', 'industrial_machinery'],
+    effects: [{ type: 'building_efficiency', value: 1.2 }],
   },
 
   /** 13. 摄影术 — 感光材料记录影像 */
@@ -207,6 +220,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.15,
     tier: 'principle',
     unlocks: ['camera', 'photograph', 'lens_camera'],
+    effects: [{ type: 'archive_capacity', value: 1.8 }],
   },
 
   /** 14. 细菌理论 — 理解微生物致病 */
@@ -220,6 +234,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.1,
     tier: 'principle',
     unlocks: ['germ_theory_knowledge', 'antiseptic', 'microscope'],
+    effects: [{ type: 'mortality_reduction', value: 0.85 }],
   },
 
   /** 15. 现代外科 — 消毒手术和麻醉 */
@@ -233,6 +248,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.05,
     tier: 'principle',
     unlocks: ['surgical_kit', 'anesthetic', 'hospital_wing'],
+    effects: [{ type: 'health_recovery', value: 1.4 }],
   },
 
   /** 16. 活字印刷 — 活字排版批量印刷 */
@@ -246,6 +262,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.2,
     tier: 'principle',
     unlocks: ['movable_type_print', 'printed_book', 'newspaper'],
+    effects: [{ type: 'archive_capacity', value: 2.0 }],
   },
 
   /** 17. 自来水加压 — 管道加压供水 */
@@ -259,6 +276,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.15,
     tier: 'principle',
     unlocks: ['water_pipe', 'water_tower', 'city_water_system'],
+    effects: [{ type: 'building_efficiency', value: 1.25 }],
   },
 
   /** 18. 造纸术改良 — 树皮麻头改良造纸 */
@@ -272,6 +290,7 @@ export const INNOVATION_TREE: InnovationNode[] = [
     probability: 0.3,
     tier: 'principle',
     unlocks: ['quality_paper', 'cheap_paper', 'paper_production_boost'],
+    effects: [{ type: 'archive_capacity', value: 1.6 }],
   },
 ];
 

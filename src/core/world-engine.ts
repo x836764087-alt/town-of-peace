@@ -121,15 +121,38 @@ export class WorldEngine {
     const agents = createAllAgents(characters, rng);
 
     // 设置初始建筑
+    const initialYear = 0;
     const buildings = INITIAL_BUILDINGS.map(b => ({
       ...b,
       level: 1,
       ownerId: undefined as string | undefined,
+      builtYear: initialYear,
     })) as Building[];
     // 设置建筑所有者
     for (const b of buildings) {
       const ownerEntry = BUILDING_OWNERS[b.id as keyof typeof BUILDING_OWNERS];
       if (ownerEntry) b.ownerId = ownerEntry;
+    }
+
+    // 初始化所有 Agent 的位置基于 initialBuilding
+    for (const agent of agents) {
+      if (agent.initialBuilding) {
+        const bld = buildings.find(b => b.id === agent.initialBuilding);
+        if (bld) {
+          agent.x = bld.x + (rng.int(0, 2) - 1); // 小随机偏移
+          agent.y = bld.y;
+          agent.currentBuilding = bld.id;
+        }
+      }
+      // 如果没有 initialBuilding，默认到社区大屋
+      if (agent.x === 0 && agent.y === 0) {
+        const townHall = buildings.find(b => b.id === 'town_hall');
+        if (townHall) {
+          agent.x = townHall.x;
+          agent.y = townHall.y;
+          agent.currentBuilding = townHall.id;
+        }
+      }
     }
 
     // 初始化经济
@@ -169,6 +192,13 @@ export class WorldEngine {
       credits: [],
       apprenticeships: [],
       __shortTermJobs: [],
+      crimeWave: 0,
+      pendingPublicOrderLaw: false,
+      pendingTrials: [],
+      placeNames: [],
+      oralTraditions: [],
+      artworks: [],
+      cultureValue: 0,
     };
 
     return new WorldEngine(state, rng);

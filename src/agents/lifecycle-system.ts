@@ -13,6 +13,8 @@
 import type { AgentState, Condition, WorldState } from '../core/types.js';
 import { SeededRNG } from '../core/rng.js';
 import { WORLD } from '../config/world.js';
+import { EVENTS, EventBus } from '../core/event-bus.js';
+import { getTechEffect } from '../world/world-effects.js';
 
 // ─── 年龄阶段 ──────────────────────────────
 
@@ -195,6 +197,11 @@ export class LifecycleSystem {
 
     for (const agent of this.state.agents) {
       if (!agent.alive) continue;
+
+      // 健康安全下限：确保 health 不低于 1
+      agent.stats.health = Math.max(1, agent.stats.health);
+      agent.stats.maxHealth = Math.max(1, agent.stats.maxHealth);
+
       const stage = getLifeStage(agent.age);
 
       // 1. 婴儿阶段：留在家庭中，不独立行动
@@ -223,31 +230,102 @@ export class LifecycleSystem {
 
   /** 婴儿处理：消耗粮食，不独立 */
   private processInfant(agent: AgentState, events: string[]): void {
-    // 婴儿从家庭粮食中消耗（由父代 food consumption 覆盖）
-    // 婴儿不产生独立事件，除非到了成长节点
-    if (agent.age === 4 && agent.born !== this.state.year) {
+    // 婴儿死亡率（每季）：0-4 岁按 INFANT_QUARTERLY_SURVIVAL_RATE 判定
+    if (this.rng.chance(1 - WORLD.INFANT_QUARTERLY_SURVIVAL_RATE)) {
+      agent.alive = false;
+      agent.deathYear = this.state.year;
+      agent.causeOfDeath = 'infant_mortality';
+      EventBus.emit(EVENTS.AGENT_DIED, { agentId: agent.id, cause: 'infant_mortality' });
+      events.push(`婴儿「${agent.name}」夭折了。`);
+    } else if (agent.age === 4 && agent.born !== this.state.year) {
       events.push(`${agent.name}已经${agent.age}岁了，到了上学的年纪。`);
     }
   }
 
-  /** 学龄处理：是否可以上学 */
+  /** 学龄处理：教育系统 + 学徒制 */
   private processSchoolAge(agent: AgentState, events: string[]): void {
     const school = this.state.buildings.find(b => b.id === 'school');
-    if (!school) return;
-
-    const isAttendingSchool = agent.tags.includes('attending_school');
     const stage = getLifeStage(agent.age);
 
-    // 初次上学（儿童阶段）
-    if (stage === 'child' && !isAttendingSchool && this.rng.chance(0.3)) {
-      agent.tags.push('attending_school');
-      events.push(`${agent.name}开始到学堂跟周建国读书认字。`);
+    if (stage === 'child') {
+      // ── 儿童教育系统 ──
+      const isAttendingSchool = agent.tags.includes('attending_school');
+
+      // 初次上学
+      if (!isAttendingSchool && this.rng.chance(0.3)) {
+        agent.tags.push('attending_school');
+        events.push(`${agent.name}开始到学堂读书认字。`);
+        return;
+      }
+
+      if (!isAttendingSchool) return;
+
+      // 辍学检查：家庭财富 < 50 时 50% 辍学
+      const parents = agent.family.parents
+        .map(pid => this.state.agents.find(a => a.id === pid))
+        .filter(Boolean);
+      const familyWealth = parents.reduce((sum, p) => sum + (p?.wealth ?? 0), 0);
+      if (familyWealth < 50 && this.rng.chance(0.5)) {
+        const idx = agent.tags.indexOf('attending_school');
+        if (idx >= 0) agent.tags.splice(idx, 1);
+        events.push(`${agent.name}因家境贫寒，不得不辍学。`);
+        return;
+      }
+
+      // 教育效果（每年）
+      // 智力提升 1-3 点
+      const intGain = this.rng.int(1, 3);
+      agent.stats.intelligence = Math.min(100, agent.stats.intelligence + intGain);
+
+      // 如果有塾师（周建国），学习效率 ×1.5
+      const hasTeacher = school && this.state.agents.some(a =>
+        a.alive && a.id === 'zhou-jianguo' && a.title === '塾师',
+      );
+      if (hasTeacher && this.rng.chance(0.5)) {
+        agent.stats.intelligence = Math.min(100, agent.stats.intelligence + 1);
+      }
+
+      // 父母技能传承：父母技能 >20 的，20% 概率传给孩子
+      for (const parent of parents) {
+        if (!parent) continue;
+        for (const [skill, level] of Object.entries(parent.skills)) {
+          if (level > 20 && this.rng.chance(0.2)) {
+            agent.skills[skill] = Math.min(50, (agent.skills[skill] ?? 0) + 1);
+          }
+        }
+      }
+
+      // 识字率 literacy 每年 +5（上限 80）
+      agent.skills.literacy = Math.min(80, (agent.skills.literacy ?? 0) + 5);
     }
 
-    // 少年阶段：可以从学徒制开始
-    if (stage === 'teen' && !agent.skills || Object.keys(agent.skills).length === 0) {
-      // 少年没有技能的可以开始学手艺
-      // 这部分后续由 apprenticeship system 处理
+    if (stage === 'teen') {
+      // ── 少年学徒制 ──
+      // 学徒收入：为成人 30-50%（在 economicPhase 中处理）
+      agent.tags.push('apprentice');
+
+      // 跟随父母学习技能
+      const parents = agent.family.parents
+        .map(pid => this.state.agents.find(a => a.id === pid))
+        .filter(Boolean);
+      for (const parent of parents) {
+        if (!parent) continue;
+        // 找父母最高技能
+        let bestSkill = '';
+        let bestLevel = 0;
+        for (const [skill, level] of Object.entries(parent.skills)) {
+          if (level > bestLevel) { bestSkill = skill; bestLevel = level; }
+        }
+        if (bestSkill && this.rng.chance(0.7)) {
+          const parentCap = Math.round(bestLevel * 0.7);
+          agent.skills[bestSkill] = Math.min(parentCap, (agent.skills[bestSkill] ?? 0) + 2);
+        }
+      }
+
+      // 如果之前上过学，识字继续增长（增速减半）
+      if (agent.tags.includes('attending_school') || (agent.skills.literacy ?? 0) > 0) {
+        agent.skills.literacy = Math.min(80, (agent.skills.literacy ?? 0) + 2);
+      }
     }
   }
 
@@ -369,13 +447,86 @@ export class LifecycleSystem {
       agent.causeOfDeath = cond.name;
       events.push(`${agent.name}因${cond.name}不治身亡。`);
     } else if (this.rng.chance(0.3)) {
-      // 病情好转
-      cond.severity = Math.max(0, cond.severity - this.rng.int(10, 30));
+      // 病情好转，受医学科技影响恢复速度
+      const healthMod = getTechEffect(this.state, 'health_recovery');
+      cond.severity = Math.max(0, cond.severity - Math.round(this.rng.int(10, 30) * healthMod));
       if (cond.severity <= 0) {
         events.push(`${agent.name}的${cond.name}好转了。`);
         agent.conditions.splice(agent.conditions.indexOf(cond), 1);
       }
     }
+  }
+
+  /**
+   * 处理职业意外死亡。
+   * 根据角色职业分配不同的意外概率：
+   * - 矿工/石匠 (mining)：高风险，使用 ACCIDENT_SKILLED_RATE
+   * - 铁匠/工匠 (blacksmithing, carpentry)：中等风险，ACCIDENT_BASE_RATE + 0.005
+   * - 农民/渔夫 (farming, fishing)：低风险，ACCIDENT_BASE_RATE
+   * - 其他/无职业：ACCIDENT_BASE_RATE
+   *
+   * 在春季（season === 'spring'）检查。
+   * 返回死亡事件描述数组。
+   */
+  processAccidents(): string[] {
+    const events: string[] = [];
+    const isSpring = this.state.season === 'spring';
+    if (!isSpring) return events;
+
+    // 职业→技能名映射（用于叙事显示）
+    const occSkillName: Record<string, string> = {
+      mining: '矿工',
+      stone_mining: '石匠',
+      blacksmithing: '铁匠',
+      carpentry: '木匠',
+      farming: '农民',
+      fishing: '渔夫',
+    };
+
+    // 各职业的技能名 → 风险等级
+    const highRiskSkills = new Set(['mining', 'stone_mining']);
+    const mediumRiskSkills = new Set(['blacksmithing', 'carpentry']);
+    const lowRiskSkills = new Set(['farming', 'fishing']);
+
+    for (const agent of this.state.agents) {
+      if (!agent.alive) continue;
+      if (agent.age <= 12) continue; // 儿童不参与劳动
+
+      // 根据技能找出职业，确定意外概率
+      let accidentChance = WORLD.ACCIDENT_BASE_RATE;
+      const skills = agent.skills;
+      let primaryOcc: string | undefined;
+
+      // 找最高技能，用于判断职业
+      let bestSkill = '';
+      let bestLevel = 0;
+      for (const [skill, level] of Object.entries(skills)) {
+        if (level > bestLevel) {
+          bestSkill = skill;
+          bestLevel = level;
+        }
+      }
+
+      // 如果最高技能匹配已知职业，使用对应的概率
+      if (highRiskSkills.has(bestSkill)) {
+        accidentChance = WORLD.ACCIDENT_BASE_RATE + 0.01;
+        primaryOcc = occSkillName[bestSkill];
+      } else if (mediumRiskSkills.has(bestSkill)) {
+        accidentChance = WORLD.ACCIDENT_BASE_RATE + 0.005;
+        primaryOcc = occSkillName[bestSkill];
+      } else if (lowRiskSkills.has(bestSkill)) {
+        accidentChance = WORLD.ACCIDENT_BASE_RATE;
+        primaryOcc = occSkillName[bestSkill];
+      }
+
+      // 无已知职业则 primaryOcc 保持 undefined
+      const occName = primaryOcc || '无业';
+      if (this.rng.chance(accidentChance)) {
+        agent.alive = false;
+        events.push(`${agent.name}（${occName}）不幸因工伤事故身亡。`);
+      }
+    }
+    return events;
   }
 
   /**

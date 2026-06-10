@@ -20,6 +20,7 @@ function makeState(): WorldState {
     relations: [], chronicle: [], snapshots: [], credits: [],
     seed: 42, populationThreshold: 100, version: '1.0',
     apprenticeships: [], __shortTermJobs: [],
+    pendingPublicOrderLaw: false,
   };
 }
 

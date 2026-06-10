@@ -86,7 +86,7 @@ export class ChronicleGenerator {
     const dead = agents.filter(a => !a.alive);
 
     // 人口统计
-    const births = agents.filter(a => a.born === year).length;
+    const births = agents.filter(a => a.born === year && a.born > 0).length;
     const deaths = agents.filter(a => a.deathYear === year).length;
 
     // 年龄段统计

@@ -23,12 +23,14 @@ import { ChronicleGenerator } from './narrative/chronicle-generator.js';
 import { RumorMill } from './agents/rumor-mill.js';
 import { GroupSystem } from './agents/group-system.js';
 import { TownEvents } from './agents/town-events.js';
-import { TechChecker } from './innovation/tech-checker.js';
 import { DiscoveryEvents } from './innovation/discoveries.js';
 import { FestivalSystem } from './society/festivals.js';
 import { ArchiveSystem } from './society/archives.js';
+import { processPlaceNames } from './world/place-names.js';
 import { EventEmitter, type SubsystemEvents } from './narrative/event-emitter.js';
 import { NarrativeTemplates } from './narrative/templates.js';
+import { processOralTraditions } from './narrative/oral-traditions.js';
+import { processArtCreation } from './narrative/art-system.js';
 
 const projectRoot = process.cwd();
 const saveDir = path.join(projectRoot, 'data', 'saves');
@@ -104,6 +106,11 @@ function populationPhase(state: WorldState, rng: SeededRNG): string[] {
     if (isFertileFemale(agent.gender, agent.age) && agent.family.spouse) {
       const spouse = state.agents.find(a => a.id === agent.family.spouse);
       if (spouse?.alive && isFertileMale(spouse.gender, spouse.age)) {
+        // 生育间隔检查：上次生育至少 2 年后才能再孕
+        const children = state.agents.filter(a => agent.family.children.includes(a.id));
+        const hasRecentChild = children.some(c => c.age < 2);
+        if (hasRecentChild) continue;
+
         if (rng.chance(WORLD.BASE_FERTILITY)) {
           const motherDies = rng.chance(WORLD.CHILDBIRTH_MORTALITY);
           const babySurvives = rng.chance(WORLD.INFANT_SURVIVAL_RATE);
@@ -118,24 +125,54 @@ function populationPhase(state: WorldState, rng: SeededRNG): string[] {
 
           if (babySurvives) {
             const givenName = rng.pick(GIVEN_NAMES);
-            const surName = surnameOf(spouse.name) || givenName; // 从父姓
+            // 50% 概率从母姓，50% 从父姓
+            const surName = rng.chance(0.5) ? surnameOf(agent.name) : surnameOf(spouse.name);
+            // 技能继承：从父母各继承 30-50%，+随机变异 ±10
+            const inheritedSkills: Record<string, number> = {};
+            const allSkillKeys = new Set([...Object.keys(spouse.skills), ...Object.keys(agent.skills)]);
+            for (const key of allSkillKeys) {
+              const paternal = spouse.skills[key] ?? 0;
+              const maternal = agent.skills[key] ?? 0;
+              const inheritRatio = 0.3 + rng.next() * 0.2; // [0.3, 0.5)
+              const base = Math.round((paternal + maternal) / 2 * inheritRatio);
+              inheritedSkills[key] = Math.max(0, Math.min(100, base + rng.int(-10, 10)));
+            }
+
+            // 属性遗传：父母加权平均 + 随机扰动
+            const inheritStat = (fatherVal: number, motherVal: number): number => {
+              return Math.round(fatherVal * 0.4 + motherVal * 0.4 + rng.int(0, 20));
+            };
+
             const baby: AgentState = {
               id: `baby-${state.year}-${rng.int(1000, 9999)}`,
               name: surName + givenName,
-              title: '',
+              title: undefined,
               age: 0, alive: true,
               gender: rng.pick(['男', '女']),
-              stats: { strength: 30, intelligence: 30, dexterity: 30, charisma: 30, health: 50, maxHealth: 50, energy: 50, happiness: 70 },
-              skills: {},
+              stats: {
+                strength: inheritStat(spouse.stats.strength, agent.stats.strength),
+                intelligence: inheritStat(spouse.stats.intelligence, agent.stats.intelligence),
+                dexterity: inheritStat(spouse.stats.dexterity, agent.stats.dexterity),
+                charisma: inheritStat(spouse.stats.charisma, agent.stats.charisma),
+                health: inheritStat(spouse.stats.health, agent.stats.health),
+                maxHealth: Math.round((spouse.stats.maxHealth + agent.stats.maxHealth) / 2),
+                energy: Math.round((spouse.stats.energy + agent.stats.energy) / 2 + rng.int(-5, 5)),
+                happiness: 70,
+              },
+              skills: inheritedSkills,
               inventory: { items: {} },
               relationships: {},
               family: { spouse: undefined, children: [], parents: [spouse.id, agent.id], household: [] },
               conditions: [], memories: [],
               born: state.year,
-              tags: ['child'],
+              tags: [...new Set([...agent.tags, ...spouse.tags, 'child'])],
               initialBuilding: undefined,
               wealth: 0,
               employees: [],
+              x: spouse.x,
+              y: spouse.y,
+              crimes: 0,
+              laborService: undefined,
             };
             state.agents.push(baby);
             spouse.family.children.push(baby.id);
@@ -202,6 +239,9 @@ function populationPhase(state: WorldState, rng: SeededRNG): string[] {
         initialBuilding: undefined,
         wealth: rng.int(30, 100),
         employees: [],
+        x: 25, y: 27, // 默认安置在客栈附近
+        crimes: 0,
+        laborService: undefined,
       };
       state.agents.push(immigrant);
       events.push(`${immigrant.name}迁入桃源镇谋生。`);
@@ -274,29 +314,68 @@ function economicPhase(state: WorldState, rng: SeededRNG): string[] {
 
 // ─── 社交阶段 ────────────────────────────────
 
+/** 计算两个 Agent 之间的地图距离 */
+function agentDistance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
 function socialPhase(state: WorldState, rng: SeededRNG): string[] {
   const events: string[] = [];
   const adults = state.agents.filter(a => a.alive && a.age >= 16);
   if (adults.length < 2) return events;
 
-  // 随机关系调整
-  for (let i = 0; i < 3; i++) {
+  // ═══ 距离影响的随机社交 ═══
+  // 计算建筑 occupancy（人多处社交加成）
+  const buildingOccupancy: Record<string, number> = {};
+  for (const agent of state.agents) {
+    if (!agent.alive || !agent.currentBuilding) continue;
+    buildingOccupancy[agent.currentBuilding] = (buildingOccupancy[agent.currentBuilding] ?? 0) + 1;
+  }
+
+  for (let i = 0; i < Math.max(15, adults.length * 2); i++) {
     const a = rng.pick(adults);
-    const b = rng.pick(adults.filter(x => x.id !== a.id));
+    // 只找距离 < 25 的社交对象
+    const candidates = adults.filter(x => {
+      if (x.id === a.id) return false;
+      return agentDistance(a, x) < 25;
+    });
+    if (candidates.length === 0) continue;
+    const b = rng.pick(candidates);
     if (!b) continue;
-    const adj = rng.int(-3, 3);
+
+    // 距离越近，关系变化幅度越大
+    const dist = agentDistance(a, b);
+    const distMod = Math.max(0.2, 1 - dist / 25);
+
+    // 同建筑加成：如果两人在同一个建筑里，社交效果 +50%
+    const sameBuilding = a.currentBuilding && a.currentBuilding === b.currentBuilding;
+    const buildingBonus = sameBuilding ? 1.5 : 1.0;
+
+    const adj = a.gender !== b.gender
+      ? Math.round(rng.int(-1, 5) * distMod * buildingBonus)
+      : Math.round(rng.int(-3, 3) * distMod * buildingBonus);
     const current = a.relationships[b.id] ?? 0;
     a.relationships[b.id] = Math.max(-100, Math.min(100, current + adj));
   }
 
-  // 婚配
+  // ═══ 距离影响的婚配 ═══
   for (const a of adults) {
     if (a.family.spouse || a.age < 18) continue;
-    for (const b of adults) {
-      if (b.family.spouse || a.id === b.id || a.gender === b.gender) continue;
-      if (Math.abs(a.age - b.age) > 15) continue;
+    // 按距离排序候选（近的优先）
+    const candidates = adults.filter(b =>
+      !b.family.spouse && a.id !== b.id && a.gender !== b.gender &&
+      Math.abs(a.age - b.age) <= 15,
+    ).sort((b1, b2) => agentDistance(a, b1) - agentDistance(a, b2));
+
+    for (const b of candidates) {
+      const dist = agentDistance(a, b);
+      // 距离 > 20 格：不能成婚
+      if (dist > 20) continue;
+
       const rel = a.relationships[b.id] ?? (b.relationships[a.id] ?? 30);
-      if (rel > 60 && rng.chance(0.3)) {
+      // 距离 < 10 格：概率 ×2
+      const marriageChance = dist < 10 ? 0.8 : 0.4;
+      if (rel > 35 && rng.chance(marriageChance)) {
         const husband = a.gender === '男' ? a : b;
         const wife = a.gender === '女' ? a : b;
         husband.family.spouse = wife.id;
@@ -316,6 +395,12 @@ function socialPhase(state: WorldState, rng: SeededRNG): string[] {
 function lifecyclePhase(state: WorldState, rng: SeededRNG): string[] {
   const system = new LifecycleSystem(state, rng);
   return system.processLifecycle();
+}
+
+/** 职业意外死亡阶段 */
+function accidentPhase(state: WorldState, rng: SeededRNG): string[] {
+  const system = new LifecycleSystem(state, rng);
+  return system.processAccidents();
 }
 
 // ─── 叙事阶段 ────────────────────────────────
@@ -405,16 +490,8 @@ function townEventPhase(state: WorldState, rng: SeededRNG): string[] {
 }
 
 function innovationPhase(state: WorldState, rng: SeededRNG): string[] {
-  const checker = new TechChecker(state);
-  const unlocked = checker.getUnlockableNodes();
-  const events: string[] = [];
-  for (const node of unlocked) {
-    if (rng.chance(0.2)) {
-      state.innovations.push({ id: node.id, name: node.name, description: node.description, prerequisites: [], requiredSkill: '', requiredSkillLevel: 0, difficulty: 0, materials: [], unlocks: [], effects: [], discoveredYear: state.year });
-      events.push(`「${node.name}」被成功研发！`);
-    }
-  }
-  return events;
+  // auto-discovery 已禁用，全部交给 discoveryPhase 处理
+  return [];
 }
 
 function discoveryPhase(state: WorldState, rng: SeededRNG): string[] {
@@ -430,6 +507,78 @@ function festivalPhase(state: WorldState, rng: SeededRNG): string[] {
 function archivePhase(state: WorldState, rng: SeededRNG): string[] {
   const as = new ArchiveSystem(state, rng);
   return as.processArchives();
+}
+
+function oralTraditionPhase(state: WorldState, rng: SeededRNG, seasonEvents: string[]): string[] {
+  return processOralTraditions(state, rng, seasonEvents);
+}
+
+// ─── 艺术创作阶段 ────────────────────────
+
+function artPhase(state: WorldState, rng: SeededRNG): string[] {
+  return processArtCreation(state, rng);
+}
+
+// ─── 位置阶段 ────────────────────────────────
+
+/** 每季更新所有 Agent 的位置 */
+function positionPhase(state: WorldState, rng: SeededRNG): void {
+  for (const agent of state.agents) {
+    if (!agent.alive) continue;
+
+    const stage = getLifeStage(agent.age);
+    let targetBld: string | undefined;
+
+    if (stage === 'infant') {
+      // 婴儿随父母
+      const parentId = agent.family.parents[0];
+      const parent = parentId ? state.agents.find(a => a.id === parentId) : undefined;
+      targetBld = parent?.currentBuilding ?? 'town_hall';
+    } else if (stage === 'child') {
+      // 儿童：上学或在父母处
+      if (agent.tags.includes('attending_school') && rng.chance(0.7)) {
+        targetBld = 'school';
+      } else {
+        const parentId = agent.family.parents[0];
+        const parent = parentId ? state.agents.find(a => a.id === parentId) : undefined;
+        targetBld = parent?.currentBuilding ?? 'town_hall';
+      }
+    } else if (stage === 'teen') {
+      // 少年：跟父母学艺或在公共区域
+      if (agent.tags.includes('apprentice') && rng.chance(0.6)) {
+        const parentId = agent.family.parents[0];
+        const parent = parentId ? state.agents.find(a => a.id === parentId) : undefined;
+        targetBld = parent?.currentBuilding ?? 'town_hall';
+      } else {
+        targetBld = rng.pick(['inn', 'noodle_stall', 'town_hall']);
+      }
+    } else {
+      // 成年人
+      if (agent.employer) {
+        // 雇员：在雇主建筑
+        const employer = state.agents.find(a => a.id === agent.employer);
+        targetBld = employer?.currentBuilding ?? agent.currentBuilding;
+      } else if (agent.initialBuilding) {
+        // 建筑所有者：在自己的建筑
+        const ownBld = state.buildings.find(b => b.ownerId === agent.id);
+        targetBld = ownBld?.id ?? agent.initialBuilding;
+      } else if (stage === 'elderly') {
+        // 老人：在家或学堂
+        targetBld = rng.chance(0.5) ? 'town_hall' : 'school';
+      } else {
+        // 其他成年人：随机去公共区域
+        targetBld = rng.pick(['inn', 'noodle_stall', 'town_hall', 'blacksmith']);
+      }
+    }
+
+    // 更新位置
+    const bld = state.buildings.find(b => b.id === targetBld);
+    if (bld) {
+      agent.x = bld.x + (rng.int(0, 2) - 1);
+      agent.y = bld.y;
+      agent.currentBuilding = bld.id;
+    }
+  }
 }
 
 // ─── 主函数 ──────────────────────────────────
@@ -473,6 +622,9 @@ async function main(): Promise<void> {
 
     const popEvents = populationPhase(engine.getState(), rng);
     const lifeEvents = lifecyclePhase(engine.getState(), rng);
+    const accEvents = accidentPhase(engine.getState(), rng);
+    // 每季更新位置
+    positionPhase(engine.getState(), rng);
     const bldEvents = buildingPhase(engine.getState(), rng);
     const diaEvents = dialoguePhase(engine.getState(), rng);
     const ecoEvents = economicPhase(engine.getState(), rng);
@@ -486,8 +638,17 @@ async function main(): Promise<void> {
     const disEvents = discoveryPhase(engine.getState(), rng);
     const rumorEvents = rumorPhase(engine.getState(), rng, [...popEvents, ...lifeEvents, ...ecoEvents, ...socEvents, ...grpEvents, ...twnEvents, ...innEvents, ...disEvents, ...fstEvents]);
     const arcEvents = archivePhase(engine.getState(), rng);
+    const artEvents = artPhase(engine.getState(), rng);
+    const oralEvents = oralTraditionPhase(engine.getState(), rng, [...popEvents, ...lifeEvents, ...ecoEvents, ...socEvents, ...grpEvents, ...twnEvents, ...innEvents, ...disEvents, ...rumorEvents, ...fstEvents]);
 
     const lawEvents = lawPhase(engine.getState(), rng);
+
+    // 地名演化阶段
+    const placeNameEvents = processPlaceNames(
+      engine.getState(),
+      rng,
+      engine.getState().chronicle,
+    );
 
     const isYearEnd = season === 'winter';
     const chrEvents = chroniclePhase(engine.getState(), rng, isYearEnd);
@@ -508,12 +669,13 @@ async function main(): Promise<void> {
     engine.tick();
 
     const allEvents = [
-      ...popEvents, ...lifeEvents, ...bldEvents, ...diaEvents,
+      ...popEvents, ...lifeEvents, ...accEvents, ...bldEvents, ...diaEvents,
       ...ecoEvents, ...socEvents,
       ...grpEvents, ...twnEvents, ...fstEvents,
       ...innEvents, ...disEvents, ...rumorEvents,
-      ...lawEvents, ...arcEvents, ...chrEvents,
-      ...narratedEvents,
+      ...lawEvents, ...arcEvents, ...artEvents, ...chrEvents,
+      ...narratedEvents, ...oralEvents,
+      ...placeNameEvents,
     ];
     const entry: ChronicleEntry = {
       year,

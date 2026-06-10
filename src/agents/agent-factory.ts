@@ -87,6 +87,10 @@ export function createAgent(config: CharacterConfig, rng: SeededRNG): AgentState
     employees: [],
     tags: [...config.tags],
     initialBuilding: config.initialBuilding,
+    x: 0,
+    y: 0,
+    crimes: 0,
+    laborService: undefined,
   };
 }
 
@@ -96,6 +100,20 @@ export function createAgent(config: CharacterConfig, rng: SeededRNG): AgentState
  * 1. 对每个 config 调用 createAgent()。
  * 2. 遍历所有 agent，将其配偶/子女/父母的 id 补充到对方的 family 字段中。
  */
+/**
+ * 随机生成一个艺术技能（10-50 范围，约 20% 概率）。
+ * 用于有艺术气质的居民。
+ */
+function maybeAddArtSkill(agent: AgentState, rng: SeededRNG): void {
+  // 有 art-related 技能的居民更可能获得 art 技能
+  const artRelated = ['painting', 'calligraphy', 'writing', 'music'];
+  const hasArtRelated = artRelated.some(s => (agent.skills[s] ?? 0) > 0);
+  const probability = hasArtRelated ? 0.6 : 0.1;
+  if (rng.chance(probability)) {
+    agent.skills.art = rng.int(10, 50);
+  }
+}
+
 export function createAllAgents(
   characters: CharacterConfig[],
   rng: SeededRNG,
@@ -105,6 +123,7 @@ export function createAllAgents(
   // Phase 1: 创建所有 agent
   for (const config of characters) {
     const agent = createAgent(config, rng);
+    maybeAddArtSkill(agent, rng);
     agents.push(agent);
   }
 
@@ -181,7 +200,10 @@ export function createImmigrantFamily(
     memories: [],
     born: 0,
     tags: ['immigrant'],
-    wealth: rng.int(30, 100),
+      wealth: rng.int(30, 100),
+      x: 0, y: 0,
+      crimes: 0,
+      laborService: undefined,
   };
 
   const agents: AgentState[] = [father];
@@ -225,6 +247,9 @@ export function createImmigrantFamily(
       tags: ['immigrant'],
       wealth: rng.int(20, 60),
       employees: [],
+      x: 0, y: 0,
+      crimes: 0,
+      laborService: undefined,
     };
     father.family.spouse = motherId;
     father.relationships[motherId] = 80;
@@ -268,6 +293,9 @@ export function createImmigrantFamily(
       tags: ['immigrant', 'child'],
       wealth: 0,
       employees: [],
+      x: 0, y: 0,
+      crimes: 0,
+      laborService: undefined,
     };
     agents.push(child);
     childAgents.push(child);

@@ -18,6 +18,7 @@ import type {
   Building,
 } from '../core/types.js';
 import { SeededRNG } from '../core/rng.js';
+import { getTechEffect } from '../world/world-effects.js';
 
 // ─── 基础价格表（文/每单位）───
 
@@ -48,6 +49,41 @@ export const BUILDING_PRODUCTS: Record<string, { itemId: string; min: number; ma
   clinic: [{ itemId: 'herbal_medicine', min: 2, max: 5 }],
   herb_stall: [{ itemId: 'herbal_medicine', min: 3, max: 7 }],
   workshop: [{ itemId: 'wood', min: 2, max: 5 }],
+};
+
+/**
+ * 建筑生产配方（Phase 3 — 真实生产链）
+ * 定义了每栋建筑生产所需的原材料 input→output 映射。
+ * 如果原料不足，产出减半或为零。
+ */
+export const BUILDING_RECIPES: Record<string, {
+  inputs: { itemId: string; quantity: number }[];
+  outputs: { itemId: string; min: number; max: number }[];
+} | undefined> = {
+  noodle_stall: {
+    inputs: [{ itemId: 'rice', quantity: 2 }],
+    outputs: [{ itemId: 'noodle', min: 8, max: 15 }],
+  },
+  blacksmith: {
+    inputs: [{ itemId: 'wood', quantity: 2 }],
+    outputs: [{ itemId: 'tools', min: 1, max: 2 }],
+  },
+  flower_garden: {
+    inputs: [],
+    outputs: [{ itemId: 'vegetables', min: 5, max: 10 }],
+  },
+  clinic: {
+    inputs: [],
+    outputs: [{ itemId: 'herbal_medicine', min: 2, max: 5 }],
+  },
+  herb_stall: {
+    inputs: [],
+    outputs: [{ itemId: 'herbal_medicine', min: 3, max: 7 }],
+  },
+  workshop: {
+    inputs: [{ itemId: 'wood', quantity: 1 }],
+    outputs: [{ itemId: 'wood', min: 3, max: 6 }], // 加工增值
+  },
 };
 
 /** 建筑→所有者 Agent ID 映射 */
@@ -122,8 +158,20 @@ export class TradeSystem {
 
   // ─── 阶段 1：建筑产出 ─────────────────────
 
+  /** 季节性生产倍率 */
+  private seasonalModifier(): number {
+    switch (this.state.season) {
+      case 'spring': return 0.8;
+      case 'summer': return 1.0;
+      case 'autumn': return 1.5;
+      case 'winter': return 0.3;
+      default: return 1.0;
+    }
+  }
+
   private buildingProduction(): string[] {
     const events: string[] = [];
+    const seasonMod = this.seasonalModifier();
 
     // 基础生存产出：每个成年人可以自给自足采集/打猎/捕鱼
     for (const agent of this.state.agents) {
@@ -133,25 +181,88 @@ export class TradeSystem {
         agent.inventory.items.rice = (agent.inventory.items.rice ?? 0) + 1;
         continue;
       }
-      // 每个成年人可获得基础口粮（采集/打猎/帮工）
-      const forage = this.rng.int(2, 5);
+      // 少年（13-17岁）：产出为成人 30-50%
+      if (agent.age >= 13 && agent.age < 18) {
+        const teenYield = Math.max(1, Math.round(this.rng.int(1, 2) * seasonMod));
+        agent.inventory.items.rice = (agent.inventory.items.rice ?? 0) + teenYield;
+        // 学徒额外收入（铜钱）
+        if (agent.tags.includes('apprentice') && this.rng.chance(0.3)) {
+          agent.wealth = (agent.wealth ?? 0) + this.rng.int(1, 3);
+        }
+        continue;
+      }
+      // 每个成年人可获得基础口粮（采集/打猎/帮工）— 受季节影响和科技效果
+      const foodMod = getTechEffect(this.state, 'food_production');
+      const forage = Math.max(1, Math.round(this.rng.int(2, 5) * seasonMod * foodMod));
       agent.inventory.items.rice = (agent.inventory.items.rice ?? 0) + forage;
     }
 
-    // 建筑专项产出（额外收入）
+    // 建筑专项产出（额外收入）— 使用配方系统
     for (const building of this.state.buildings) {
       const ownerId = building.ownerId;
       if (!ownerId) continue;
       const agent = this.state.agents.find(a => a.id === ownerId);
       if (!agent?.alive) continue;
 
-      const products = BUILDING_PRODUCTS[building.id];
-      if (!products) continue;
+      const recipe = BUILDING_RECIPES[building.id];
+      if (!recipe) {
+        // 没有配方的建筑：用旧版系统
+        const products = BUILDING_PRODUCTS[building.id];
+        if (!products) continue;
+        for (const prod of products) {
+          const bldEff = getTechEffect(this.state, 'building_efficiency');
+          const amount = Math.max(0, Math.round(this.rng.int(prod.min, prod.max) * seasonMod * bldEff));
+          if (amount > 0) {
+            agent.inventory.items[prod.itemId] = (agent.inventory.items[prod.itemId] ?? 0) + amount;
+          }
+        }
+        continue;
+      }
 
-      for (const prod of products) {
-        const amount = this.rng.int(prod.min, prod.max);
+      // 配方系统：检查是否有足够原材料
+      let hasAllInputs = true;
+      let shortage = false;
+      for (const input of recipe.inputs) {
+        const qty = agent.inventory.items[input.itemId] ?? 0;
+        if (qty < input.quantity) {
+          hasAllInputs = false;
+          if (qty === 0) shortage = true;
+        }
+      }
+
+      let outputMod = 1.0;
+      if (!hasAllInputs) {
+        if (shortage) {
+          // 完全没原料：产出为零
+          // 只在冬季记录停产（减少噪音）
+          if (this.state.season === 'winter') {
+            events.push(`${building.name}因缺乏原料停产。`);
+          }
+          continue;
+        } else {
+          // 原料不足：产出减半
+          outputMod = 0.5;
+          // 消耗现有原料
+          for (const input of recipe.inputs) {
+            const qty = agent.inventory.items[input.itemId] ?? 0;
+            if (qty > 0) {
+              agent.inventory.items[input.itemId] = Math.max(0, qty - Math.floor(input.quantity * 0.5));
+            }
+          }
+        }
+      } else {
+        // 原料充足：正常消耗
+        for (const input of recipe.inputs) {
+          agent.inventory.items[input.itemId] = (agent.inventory.items[input.itemId] ?? 0) - input.quantity;
+        }
+      }
+
+      // 产出
+      for (const output of recipe.outputs) {
+        const bldEff = getTechEffect(this.state, 'building_efficiency');
+        const amount = Math.max(0, Math.round(this.rng.int(output.min, output.max) * outputMod * seasonMod * bldEff));
         if (amount > 0) {
-          agent.inventory.items[prod.itemId] = (agent.inventory.items[prod.itemId] ?? 0) + amount;
+          agent.inventory.items[output.itemId] = (agent.inventory.items[output.itemId] ?? 0) + amount;
         }
       }
     }
@@ -393,7 +504,7 @@ export class TradeSystem {
     return events;
   }
 
-  // ─── 阶段 5：食物消耗 ─────────────────────
+  // ─── 阶段 5：食物消耗 + 饥饿机制（Phase 3） ──
 
   private foodConsumption(): string[] {
     const events: string[] = [];
@@ -402,7 +513,8 @@ export class TradeSystem {
     for (const agent of this.state.agents) {
       if (!agent.alive) continue;
 
-      const need = this.rng.int(1, 2);
+      // 每季消耗：成人 3 单位，儿童 2 单位
+      const need = agent.age >= 13 ? 3 : 2;
       let consumed = 0;
 
       // 依次消耗各种食物库存
@@ -416,12 +528,46 @@ export class TradeSystem {
         }
       }
 
+      // 未成年人食物不足时，从父母库存取粮（仅限 <18 岁）
+      if (consumed < need && agent.age < 18) {
+        for (const parentId of agent.family.parents) {
+          if (consumed >= need) break;
+          const parent = this.state.agents.find(p => p.id === parentId && p.alive);
+          if (!parent) continue;
+          for (const item of foodItems) {
+            if (consumed >= need) break;
+            const qty = parent.inventory.items[item] ?? 0;
+            if (qty > 0) {
+              const take = Math.min(qty, need - consumed);
+              parent.inventory.items[item] = qty - take;
+              consumed += take;
+            }
+          }
+        }
+      }
+
+      // 食物不足的后果
       if (consumed < need) {
-        agent.stats.health = Math.max(0, agent.stats.health - 5);
-        // 只在成年人饥饿超过阈值时记录叙事（减少噪音）
-        if (agent.age >= 18 && agent.stats.health < 30 && this.rng.chance(0.3)) {
-          const name = agent.title ? `${agent.name}（${agent.title}）` : agent.name;
-          events.push(`${name}粮食不足，健康堪忧。`);
+        agent.stats.happiness = Math.max(0, agent.stats.happiness - 5);
+
+        if (agent.age >= 13) {
+          // 成人：扣 health，连续 4 季 health=0 → 饿死
+          const hungerDmg = (need - consumed) * 3;
+          agent.stats.health = Math.max(0, agent.stats.health - hungerDmg);
+
+          if (agent.stats.health <= 0) {
+            agent.alive = false;
+            agent.deathYear = this.state.year;
+            agent.causeOfDeath = '饿死';
+            const name = agent.title ? `${agent.name}（${agent.title}）` : agent.name;
+            events.push(`${name}因饥饿而亡。`);
+          } else if (agent.stats.health < 30 && this.rng.chance(0.3)) {
+            const name = agent.title ? `${agent.name}（${agent.title}）` : agent.name;
+            events.push(`${name}粮食不足，面黄肌瘦。`);
+          }
+        } else {
+          // 儿童：只扣健康，不死（父母养着）
+          agent.stats.health = Math.max(1, agent.stats.health - 3);
         }
       }
     }

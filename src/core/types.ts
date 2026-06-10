@@ -138,6 +138,16 @@ export interface AgentState {
   initialBuilding?: string;
   /** 持有的铜钱（文）。 */
   wealth: number;
+  /** 当前所在建筑 id（每季更新）。 */
+  currentBuilding?: string;
+  /** 地图 x 坐标。 */
+  x: number;
+  /** 地图 y 坐标。 */
+  y: number;
+  /** 犯罪次数（用于累犯判罚） */
+  crimes: number;
+  /** 苦役标记：记录还需服刑的季度数，>0 表示正在苦役 */
+  laborService?: number;
 }
 
 /** Aggregate economic state for the entire simulation. */
@@ -157,7 +167,7 @@ export interface EconomyState {
 /** Upgrade material progress for a building (0-100). */
 export type MaterialProgress = number;
 
-/** A building on the world map. */
+/** A single building on the world map. */
 export interface Building {
   /** Unique building identifier. */
   id: string;
@@ -181,6 +191,22 @@ export interface Building {
   upgradeCost: UpgradeCost;
   /** Technology prerequisites for the next upgrade level. */
   techRequired: string[];
+  /** Simulation year when this building was created. */
+  builtYear: number;
+}
+
+/** A named place record tracking legendary / memorial renaming of a building. */
+export interface PlaceName {
+  /** Building id this place name refers to. */
+  buildingId: string;
+  /** Original name of the building when first built. */
+  originalName: string;
+  /** Current legendary or memorial name. */
+  legendaryName: string;
+  /** Simulation year the name was assigned. */
+  yearNamed: number;
+  /** Reason for renaming — `'age'` for legendary, `'memorial'` for deceased notable. */
+  reason: 'age' | 'memorial';
 }
 
 /** Material cost for upgrading a building, expressed in copper coins (文). */
@@ -379,6 +405,22 @@ export interface Relation {
   value: number;
 }
 
+/** A created artwork (poetry, painting, or music). */
+export interface ArtWork {
+  /** Unique identifier. */
+  id: string;
+  /** Agent id of the creator. */
+  creatorId: string;
+  /** Type of artwork. */
+  type: 'poetry' | 'painting' | 'music';
+  /** Title of the artwork. */
+  title: string;
+  /** Quality score 0–100. */
+  quality: number;
+  /** Simulation year when created. */
+  yearCreated: number;
+}
+
 /** A single entry in the in-game chronicle / history log. */
 export interface ChronicleEntry {
   /** Simulation year of the event. */
@@ -507,4 +549,34 @@ export interface WorldState {
   apprenticeships: ApprenticeshipRecord[];
   /** Short-term (temporary / daily-wage) employment records. */
   __shortTermJobs: ShortTermJob[];
+  /** 犯罪潮指数（0-100），冲突时升高，每季衰减。影响法律提议概率。 */
+  crimeWave: number;
+  /** 犯罪潮 >70 时标记，触发后重置，表示公共安全法待提交。 */
+  pendingPublicOrderLaw: boolean;
+  /** 待审判的偷窃者记录 [{ thiefId, victimId }] */
+  pendingTrials: { thiefId: string; victimId: string }[];
+  /** 地名演化记录（传说名 / 纪念命名）。 */
+  placeNames: PlaceName[];
+  /** 口头传说 / 民间故事 */
+  oralTraditions: OralTradition[];
+  /** 全镇创作的艺术作品集合。 */
+  artworks: ArtWork[];
+  /** 全镇文化值 0–100。 */
+  cultureValue: number;
+}
+
+/** 一条口头传说 / 民间故事 */
+export interface OralTradition {
+  /** 唯一标识 */
+  id: string;
+  /** 故事标题 */
+  title: string;
+  /** 故事正文 */
+  content: string;
+  /** 诞生年份 */
+  yearBorn: number;
+  /** 传播度 0-100 */
+  spread: number;
+  /** 故事类型 */
+  type: 'legend' | 'cautionary' | 'historical' | 'humorous';
 }
