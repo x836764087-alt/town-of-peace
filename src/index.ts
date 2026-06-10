@@ -32,6 +32,14 @@ import { NarrativeTemplates } from './narrative/templates.js';
 import { processOralTraditions } from './narrative/oral-traditions.js';
 import { processArtCreation } from './narrative/art-system.js';
 import { BiographySystem } from './llm/biography-system.js';
+import { MemorySystem } from './llm/memory-system.js';
+import { PersonaEvolution } from './llm/persona-evolution.js';
+import { DecisionEngine } from './llm/decision-engine.js';
+import { DialogueGenerator as LLMDialogueGenerator } from './llm/dialogue-generator.js';
+import { EventSeeder } from './llm/event-seeder.js';
+import { EcologySystem } from './llm/ecology-system.js';
+import { LifecycleNarratives } from './llm/lifecycle-narratives.js';
+import { EcologyEvents } from './llm/ecology-events.js';
 
 const projectRoot = process.cwd();
 const saveDir = path.join(projectRoot, 'data', 'saves');
@@ -121,7 +129,7 @@ function populationPhase(state: WorldState, rng: SeededRNG): string[] {
             agent.deathYear = state.year;
             agent.causeOfDeath = '难产';
             EventBus.emit(EVENTS.AGENT_DIED, { agentId: agent.id, cause: '难产' });
-            events.push(`${agent.name}在分娩${babySurvives ? '' : '中母婴'}不幸离世。`);
+            events.push(`${agent.name}（${agent.title ?? '村民'}）在分娩中${babySurvives ? '不幸离世，婴儿得以保全' : '与婴儿一同离世，悲剧降临这个家庭'}。`);
           }
 
           if (babySurvives) {
@@ -179,7 +187,7 @@ function populationPhase(state: WorldState, rng: SeededRNG): string[] {
             spouse.family.children.push(baby.id);
             agent.family.children.push(baby.id);
             EventBus.emit(EVENTS.AGENT_BORN, { childId: baby.id, fatherId: spouse.id, motherId: agent.id });
-            events.push(`${agent.name}（${agent.title ?? ''}）诞下一${baby.gender === '男' ? '子' : '女'}，取名「${baby.name}」。`);
+            events.push(`${agent.name}（${agent.title ?? '村民'}）诞下一${baby.gender === '男' ? '子' : '女'}，取名「${baby.name}」，为桃源镇增添了新的希望。`);
           }
         }
       }
@@ -617,6 +625,10 @@ async function main(): Promise<void> {
   const targetYear = engine.getState().year + args.years;
   const allChronicle: ChronicleEntry[] = [];
 
+  // 生态系统（跨年维护状态）
+  const masterRng = engine.getRng();
+  const ecologySystem = new EcologySystem(masterRng);
+
   while (engine.getState().year < targetYear) {
     const { year, season } = engine.getState();
     const rng = engine.getRng();
@@ -701,6 +713,111 @@ async function main(): Promise<void> {
       if (agent.alive && agent.biography) {
         await bioSystem.updateBiographyNarrative(agent);
       }
+    }
+
+    // ─── Phase 10: 记忆 + 人格演化 ────────────────
+    // 记忆压缩（每季）
+    const memorySystem = new MemorySystem();
+    for (const agent of engine.getState().agents) {
+      if (agent.alive) {
+        await memorySystem.processSeasonalMemory(agent, allEvents);
+      }
+    }
+
+    // 人格演化（每 10 年）
+    const personaEvolution = new PersonaEvolution();
+    for (const agent of engine.getState().agents) {
+      if (agent.alive && agent.biography) {
+        await personaEvolution.updateIfNeeded(agent, engine.getState().year);
+      }
+    }
+
+    // ─── Phase 11: LLM 对话 + 决策引擎 ──────────────
+    const state = engine.getState();
+    const aliveAgents = state.agents.filter((a: AgentState) => a.alive);
+    const dialogueGen = new LLMDialogueGenerator(rng);
+    const pairs = dialogueGen.samplePairs(aliveAgents, 3);
+    for (const [a, b] of pairs) {
+      const dialogue = await dialogueGen.generateDialogue(a, b, {
+        season: SEASON_NAMES[season],
+        recentEvent: allEvents.length > 0 ? allEvents[0] : undefined,
+      });
+      if (dialogue) {
+        allEvents.push(`💬 ${dialogue}`);
+      }
+    }
+
+    // 决策引擎实例化（供后续 Phase 使用，暂不主动调用）
+    const decisionEngine = new DecisionEngine(rng);
+
+    // ─── Phase 11.2: LLM 事件种子 ──────────────────
+    // 用 LLM 生成额外事件（每季，概率 40%）
+    const eventSeeder = new EventSeeder(rng);
+    if (rng.chance(0.4)) {
+      const pop = state.agents.filter((a: AgentState) => a.alive).length;
+      const happiness = pop > 0
+        ? state.agents.filter((a: AgentState) => a.alive).reduce((s: number, a: AgentState) => s + a.stats.happiness, 0) / pop
+        : 50;
+      const recentCapsule = allEvents.slice(-5);
+      const events = await eventSeeder.generateEvents(
+        { year: state.year, season: SEASON_NAMES[season], population: pop, avgHappiness: Math.round(happiness) },
+        recentCapsule,
+      );
+      for (const evt of events) {
+        allEvents.push(`[${evt.type}] ${evt.title}：${evt.description}`);
+      }
+    }
+
+    // ─── Phase 12.1: 生态动态 ─────────────────────
+    // 每季更新生态状态
+    const pop = state.agents.filter((a: AgentState) => a.alive).length;
+    const bldCount = state.buildings?.length ?? 0;
+    const farmIntensity = Math.min(10, Math.floor(pop / 5));
+    const ecoWarnings = ecologySystem.tick(season, pop, bldCount, farmIntensity);
+    for (const warning of ecoWarnings) {
+      allEvents.push(`🌿 ${warning}`);
+    }
+
+    // ─── Phase 12.2: 生命周期叙事增强 ─────────────
+    // LLM 生成新生儿祝福与逝者悼词
+    const lifecycleNarratives = new LifecycleNarratives(masterRng);
+    const newbornAgents = state.agents.filter(
+      (a: AgentState) => a.alive && a.born !== undefined && a.born >= state.year && a.age === 0,
+    );
+    for (const baby of newbornAgents) {
+      const mother = state.agents.find((a: AgentState) =>
+        a.family.children.includes(baby.id),
+      );
+      const father = state.agents.find((a: AgentState) =>
+        a.family.children.includes(baby.id) && a.id !== mother?.id,
+      );
+      const parents = [
+        mother ? { name: mother.name, title: mother.title } : undefined,
+        father ? { name: father.name, title: father.title } : undefined,
+      ].filter(Boolean) as { name: string; title?: string }[];
+      const narrative = await lifecycleNarratives.generateBirthNarrative(
+        baby.name, baby.gender, parents,
+      );
+      allEvents.push(`✨ ${narrative}`);
+    }
+    const recentDeceased = state.agents.filter(
+      (a: AgentState) => !a.alive && a.deathYear === state.year,
+    );
+    for (const agent of recentDeceased) {
+      if (agent.biography && (agent.biography.obituary || agent.causeOfDeath)) {
+        const narrative = await lifecycleNarratives.generateDeathNarrative(
+          agent.name, agent.age, agent.title, agent.causeOfDeath, agent.biography.obituary?.summary,
+        );
+        allEvents.push(`🕯️ ${narrative}`);
+      }
+    }
+
+    // ─── Phase 12.3: 生态叙事事件 ─────────────────
+    // 将生态状态转化为居民可感知的叙事事件
+    const ecologyEvents = new EcologyEvents(ecologySystem, masterRng);
+    const ecoNarrativeEvents = ecologyEvents.generateSeasonalEvents(SEASON_NAMES[season]);
+    for (const evt of ecoNarrativeEvents) {
+      allEvents.push(`🌾 ${evt}`);
     }
 
     engine.tick();

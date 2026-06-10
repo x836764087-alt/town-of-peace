@@ -55,6 +55,47 @@ export class SeededRNG {
   }
 
   /**
+   * 返回 [0, 1) 之间的均匀浮点数（alias of next）。
+   */
+  uniform(): number {
+    return this._rng();
+  }
+
+  /**
+   * 将数组原地 Fisher-Yates 打乱后返回引用。
+   */
+  shuffle<T>(arr: T[]): T[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = this.int(0, i);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  /**
+   * 从数组中采样指定数量的不重复 pairs (a, b)，其中 a !== b。
+   * @param items  待采样的元素数组
+   * @param count  期望的 pair 数量
+   * @returns 采样到的 pair 数组，最多为 min(n*(n-1), count) 对
+   */
+  samplePairs<T>(items: T[], count: number): Array<[T, T]> {
+    if (items.length < 2 || count <= 0) { return []; }
+    const maxPairs = items.length * (items.length - 1);
+    const n = Math.min(count, maxPairs);
+    const shuffled = this.shuffle(items);
+    const pairs: Array<[T, T]> = [];
+    for (let i = 0; i < items.length && pairs.length < n; i++) {
+      for (let j = 0; j < items.length && pairs.length < n; j++) {
+        if (i !== j) {
+          pairs.push([shuffled[i], shuffled[j]]);
+        }
+      }
+    }
+    return pairs;
+  }
+
+  /**
    * 按给定概率返回 true。
    */
   chance(probability: number): boolean {
