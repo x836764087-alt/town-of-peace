@@ -31,6 +31,7 @@ import { EventEmitter, type SubsystemEvents } from './narrative/event-emitter.js
 import { NarrativeTemplates } from './narrative/templates.js';
 import { processOralTraditions } from './narrative/oral-traditions.js';
 import { processArtCreation } from './narrative/art-system.js';
+import { BiographySystem } from './llm/biography-system.js';
 
 const projectRoot = process.cwd();
 const saveDir = path.join(projectRoot, 'data', 'saves');
@@ -163,7 +164,7 @@ function populationPhase(state: WorldState, rng: SeededRNG): string[] {
               inventory: { items: {} },
               relationships: {},
               family: { spouse: undefined, children: [], parents: [spouse.id, agent.id], household: [] },
-              conditions: [], memories: [],
+              conditions: [], memories: [], biography: undefined,
               born: state.year,
               tags: [...new Set([...agent.tags, ...spouse.tags, 'child'])],
               initialBuilding: undefined,
@@ -233,7 +234,7 @@ function populationPhase(state: WorldState, rng: SeededRNG): string[] {
         inventory: { items: { rice: rng.int(3, 8) } },
         relationships: {},
         family: { spouse: undefined, children: [], parents: [], household: [] },
-        conditions: [], memories: [],
+        conditions: [], memories: [], biography: undefined,
         born: state.year,
         tags: ['immigrant'],
         initialBuilding: undefined,
@@ -620,6 +621,9 @@ async function main(): Promise<void> {
     const { year, season } = engine.getState();
     const rng = engine.getRng();
 
+    // ─── BiographySystem ───────────────────────
+    const bioSystem = new BiographySystem(engine.getState());
+
     const popEvents = populationPhase(engine.getState(), rng);
     const lifeEvents = lifecyclePhase(engine.getState(), rng);
     const accEvents = accidentPhase(engine.getState(), rng);
@@ -666,8 +670,7 @@ async function main(): Promise<void> {
     };
     const narratedEvents = ee.emitAll(subsystemEvents);
 
-    engine.tick();
-
+    // ─── Collect all events for biography phase ───
     const allEvents = [
       ...popEvents, ...lifeEvents, ...accEvents, ...bldEvents, ...diaEvents,
       ...ecoEvents, ...socEvents,
@@ -677,6 +680,31 @@ async function main(): Promise<void> {
       ...narratedEvents, ...oralEvents,
       ...placeNameEvents,
     ];
+
+    // ─── Phase 9: 居民档案系统 ──────────────────
+    for (const agent of engine.getState().agents) {
+      if (agent.alive && !agent.biography) {
+        await bioSystem.initNewbornBiography(agent);
+      }
+    }
+    for (const agent of engine.getState().agents) {
+      if (!agent.alive && agent.biography && !agent.biography.obituary) {
+        await bioSystem.generateObituary(agent);
+      }
+    }
+    for (const agent of engine.getState().agents) {
+      if (agent.alive && agent.biography) {
+        bioSystem.processLifeEvents(agent, allEvents);
+      }
+    }
+    for (const agent of engine.getState().agents) {
+      if (agent.alive && agent.biography) {
+        await bioSystem.updateBiographyNarrative(agent);
+      }
+    }
+
+    engine.tick();
+
     const entry: ChronicleEntry = {
       year,
       severity: allEvents.length > 3 ? 'dramatic' : allEvents.length > 1 ? 'notable' : 'peaceful',

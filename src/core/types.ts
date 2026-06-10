@@ -94,6 +94,64 @@ export interface Memory {
   importance: number;
 }
 
+// ─── Phase 9: 居民档案系统 ─────────────────────
+
+/** 人格特征描述 */
+export interface AgentPersona {
+  /** 性格特征，如 ["勤劳", "固执", "念旧"] */
+  traits: string[];
+  /** 价值观，如 ["家庭优先", "厌恶风险"] */
+  values: string[];
+  /** 人生格言/座右铭（LLM 生成） */
+  motto?: string;
+  /** 人物弧光描述（LLM 更新，反映人生变化） */
+  narrative_arc: string;
+  /** 最后一次人格更新的年份 */
+  lastUpdated: number;
+}
+
+/** 人生大事记录 */
+export interface LifeEvent {
+  /** 发生年份 */
+  year: number;
+  /** 事件类型 */
+  type: string;
+  /** 事件描述 */
+  description: string;
+  /** 关联的其他 agent id 列表 */
+  relatedAgentIds?: string[];
+  /** 重要性（0-1），影响是否算"大事" */
+  importance: number;
+}
+
+/** 讣告——死后生平总结（LLM 生成） */
+export interface Obituary {
+  /** 死亡年份 */
+  year: number;
+  /** 享年 */
+  age: number;
+  /** 盖棺定论 */
+  summary: string;
+  /** 最被人记住的事 */
+  legacy: string;
+  /** 参与的重大事件数 */
+  majorEventCount: number;
+}
+
+/** 居民档案——AgentState 的增强字段聚合 */
+export interface AgentBiography {
+  /** 人格特征 */
+  persona: AgentPersona;
+  /** 人生大事时间线 */
+  timeline: LifeEvent[];
+  /** 讣告（死后才有） */
+  obituary?: Obituary;
+  /** 社会声望（-100 ~ 100），由行为累积 */
+  reputation: number;
+  /** 最后一次定期更新的年份 */
+  lastBiographyUpdate: number;
+}
+
 /** Full persistent state of a single agent. */
 export interface AgentState {
   /** Unique agent identifier. */
@@ -126,6 +184,8 @@ export interface AgentState {
   employees: string[];
   /** Memories carried across years. */
   memories: Memory[];
+  /** 居民档案（Phase 9 LLM 系统） */
+  biography?: AgentBiography;
   /** Simulation year when the agent was born. */
   born: number;
   /** Year of death — present only when `alive === false`. */

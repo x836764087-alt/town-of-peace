@@ -6,3 +6,4 @@ dist/
 .env.local
 data/saves/backup-*.json
 data/saves/last-save.json
+.env
