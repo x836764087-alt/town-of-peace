@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏘️ 桃源镇 — Living Town</title>
+  <link rel="stylesheet" href="/css/game.css">
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="loading-screen">
+    <div class="loading-content">
+      <h1>🏘️ 桃源镇</h1>
+      <p class="loading-subtitle">Living Town</p>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+      <p class="loading-text">正在连接小镇...</p>
+    </div>
+  </div>
+
+  <div id="game-container" style="display:none">
+    <!-- Top bar -->
+    <div id="top-bar">
+      <span id="time-display">—</span>
+      <span id="weather-display">☀️</span>
+      <span id="population-display">👥 0</span>
+      <button id="btn-follow" title="围观模式">👁️ 围观</button>
+    </div>
+
+    <div id="main-area">
+      <!-- Canvas -->
+      <div id="canvas-wrapper">
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+      </div>
+
+      <!-- Sidebar -->
+      <div id="sidebar">
+        <div id="minimap-container">
+          <h3>🗺️ 迷你地图</h3>
+          <canvas id="minimap-canvas" width="150" height="120"></canvas>
+        </div>
+
+        <div id="agent-list">
+          <h3>👥 居民 <span id="agent-count">0</span></h3>
+          <div id="agent-list-items"></div>
+        </div>
+
+        <div id="stats-panel">
+          <h3>📊 城镇统计</h3>
+          <div id="stats-content">
+            <div>年: <span id="stat-year">—</span></div>
+            <div>季: <span id="stat-season">—</span></div>
+            <div>日: <span id="stat-day">—</span></div>
+            <div>人口: <span id="stat-pop">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div id="bottom-bar">
+      <div id="chronicle-panel">
+        <span class="panel-label">📜 编年史</span>
+        <div id="chronicle-text">小镇苏醒...</div>
+      </div>
+      <div id="activity-panel">
+        <span class="panel-label">💬 动态</span>
+        <div id="activity-text">等待活动...</div>
+      </div>
+    </div>
+
+    <!-- Agent detail modal -->
+    <div id="agent-modal" class="modal" style="display:none">
+      <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/network.js"></script>
+  <script src="/js/game.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.app = new GameApp();
+    });
+  </script>
+</body>
+</html>

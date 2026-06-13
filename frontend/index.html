@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>桃源镇 · Town of Peace</title>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* === Global Reset === */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --wood-dark: #5D3A1A;
+  --wood-mid: #8B5E3C;
+  --wood-light: #C4956A;
+  --parchment: #F5E6C8;
+  --parchment-dark: #E8D5B0;
+  --text-primary: #2C1810;
+  --text-secondary: #5C3A2A;
+  --accent-gold: #E8C37B;
+  --accent-red: #e74c3c;
+  --accent-green: #2ecc71;
+  --accent-blue: #3498db;
+  --accent-orange: #f39c12;
+  --bg-body: #1a1a2e;
+  --bg-panel: #2d2d44;
+  --bg-card: #3a3a52;
+  --text-on-dark: #e0dcd0;
+  --border-color: #4a4a64;
+  --tile-size: 28px;
+  --header-h: 44px;
+}
+
+html, body { height: 100%; overflow: hidden; font-family: 'Pixelify Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg-body); color: var(--text-on-dark); }
+body { display: flex; flex-direction: column; user-select: none; }
+
+/* === Top Bar === */
+#topbar {
+  height: var(--header-h);
+  background: linear-gradient(135deg, var(--wood-dark), var(--wood-mid));
+  display: flex; align-items: center; padding: 0 16px;
+  border-bottom: 2px solid var(--accent-gold);
+  flex-shrink: 0; gap: 12px;
+}
+#topbar .title { font-size: 16px; font-weight: bold; color: var(--accent-gold); white-space: nowrap; }
+#topbar .season-display { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #fff; }
+#topbar .season-icon { font-size: 18px; }
+#topbar .year-display { color: var(--parchment); font-size: 13px; }
+#topbar .spacer { flex: 1; }
+#topbar input[type="text"] {
+  background: var(--bg-panel); border: 1px solid var(--wood-light); color: var(--text-on-dark);
+  padding: 4px 10px; border-radius: 4px; font-size: 13px; width: 160px;
+  font-family: inherit;
+}
+#topbar input::placeholder { color: #888; }
+#topbar .btn {
+  background: var(--bg-card); border: 1px solid var(--wood-light); color: var(--text-on-dark);
+  padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;
+  font-family: inherit;
+}
+#topbar .btn:hover { background: var(--wood-light); color: var(--text-primary); }
+
+/* === Main Content === */
+#main {
+  display: flex; flex: 1; overflow: hidden;
+}
+
+/* === Map Area === */
+#map-area {
+  flex: 1; position: relative; overflow: hidden;
+  background: #1a1a2e;
+  cursor: grab;
+}
+#map-area:active { cursor: grabbing; }
+#map-area canvas { display: block; position: absolute; top: 0; left: 0; image-rendering: pixelated; }
+#map-area .map-hint {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; color: rgba(255,255,255,0.35);
+  pointer-events: none; white-space: nowrap;
+}
+
+/* === Sidebar === */
+#sidebar {
+  width: 320px; min-width: 280px;
+  display: flex; flex-direction: column;
+  background: var(--bg-panel); border-left: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+/* Chronicle */
+#chronicle-panel {
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 0;
+}
+#chronicle-panel .panel-header {
+  padding: 8px 12px; font-size: 14px; font-weight: bold;
+  background: var(--bg-card); border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+#chronicle-list {
+  flex: 1; overflow-y: auto; padding: 8px;
+  font-size: 12px; line-height: 1.5;
+}
+#chronicle-list::-webkit-scrollbar { width: 6px; }
+#chronicle-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+.chron-year-heading { color: var(--accent-gold); font-weight: bold; font-size: 13px; margin: 8px 0 4px; }
+.chron-entry { padding: 3px 6px; border-radius: 3px; margin-bottom: 2px; cursor: default; display: flex; gap: 6px; align-items: flex-start; }
+.chron-entry:hover { background: rgba(255,255,255,0.05); }
+.chron-entry .sev-icon { flex-shrink: 0; font-size: 13px; }
+.chron-entry .sev-epochal { border-left: 3px solid var(--accent-gold); }
+.chron-entry .sev-dramatic { border-left: 3px solid var(--accent-red); }
+.chron-entry .sev-notable { border-left: 3px solid var(--accent-blue); }
+.chron-entry .sev-peaceful { border-left: 3px solid var(--accent-green); }
+.chron-year-tag { color: var(--wood-light); font-size: 11px; white-space: nowrap; flex-shrink: 0; padding-top: 1px; }
+
+/* Dashboard */
+#dashboard-panel {
+  height: 200px; flex-shrink: 0;
+  border-top: 1px solid var(--border-color);
+  display: flex; flex-direction: column;
+}
+#dashboard-panel .panel-header {
+  padding: 6px 12px; font-size: 13px; font-weight: bold;
+  background: var(--bg-card); flex-shrink: 0;
+}
+#dashboard-grid {
+  flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--border-color); overflow: hidden;
+}
+.dash-item {
+  background: var(--bg-panel); padding: 6px 10px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.dash-item .label { font-size: 11px; color: var(--wood-light); }
+.dash-item .value { font-size: 15px; font-weight: bold; color: var(--text-on-dark); }
+
+/* === Agent Modal === */
+#agent-modal {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 1000; justify-content: center; align-items: center;
+}
+#agent-modal.open { display: flex; }
+#agent-modal .modal-box {
+  background: var(--parchment); color: var(--text-primary);
+  border: 3px solid var(--wood-mid); border-radius: 8px;
+  width: 380px; max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  font-size: 13px; line-height: 1.5;
+}
+#agent-modal .modal-box::-webkit-scrollbar { width: 6px; }
+#agent-modal .modal-box::-webkit-scrollbar-thumb { background: var(--wood-light); border-radius: 3px; }
+.modal-header {
+  background: linear-gradient(135deg, var(--wood-dark), var(--wood-mid));
+  color: var(--parchment); padding: 12px 16px; position: relative;
+}
+.modal-header h2 { font-size: 16px; margin-bottom: 2px; }
+.modal-header .sub { font-size: 12px; opacity: 0.8; }
+.modal-close {
+  position: absolute; top: 8px; right: 12px; font-size: 20px;
+  cursor: pointer; color: var(--parchment); background: none; border: none;
+}
+.modal-body { padding: 12px 16px; }
+.modal-section { margin-bottom: 12px; }
+.modal-section h3 { font-size: 13px; font-weight: bold; color: var(--wood-dark); border-bottom: 1px solid var(--parchment-dark); padding-bottom: 3px; margin-bottom: 6px; }
+.stat-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.stat-row .stat-label { width: 50px; font-size: 12px; color: var(--text-secondary); }
+.stat-row .stat-bar { flex: 1; height: 10px; background: var(--parchment-dark); border-radius: 5px; overflow: hidden; }
+.stat-row .stat-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }
+.stat-row .stat-val { width: 30px; text-align: right; font-size: 11px; color: var(--text-secondary); }
+.stat-fill.good { background: var(--accent-green); }
+.stat-fill.mid { background: var(--accent-orange); }
+.stat-fill.bad { background: var(--accent-red); }
+.skill-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.skill-bar .skill-label { width: 90px; font-size: 12px; color: var(--text-secondary); }
+.skill-bar .skill-fill-bg { flex: 1; height: 8px; background: var(--parchment-dark); border-radius: 4px; overflow: hidden; }
+.skill-bar .skill-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-gold)); border-radius: 4px; }
+.skill-bar .skill-val { width: 28px; text-align: right; font-size: 11px; color: var(--text-secondary); }
+.modal-memory { padding: 4px 0; border-bottom: 1px solid var(--parchment-dark); display: flex; gap: 6px; }
+.modal-memory .mem-year { color: var(--wood-light); font-size: 11px; flex-shrink: 0; padding-top: 1px; }
+.modal-memory .mem-text { font-size: 12px; }
+.tab-btn { cursor:pointer;padding:2px 8px;border-radius:3px;font-size:13px; }
+.tab-btn:hover { background:rgba(255,255,255,0.1); }
+.tab-btn.active { background:var(--wood-light);color:var(--text-primary); }
+</style>
+</head>
+<body>
+
+<!-- === Top Bar === -->
+<div id="topbar">
+  <span class="title">🏘 桃源镇</span>
+  <span class="season-display"><span class="season-icon" id="seasonIcon">🌸</span><span id="seasonText">春季</span></span>
+  <span class="year-display">Year <span id="yearDisplay">—</span></span>
+  <span id="dayNightIcon" style="font-size:14px;">☀️</span>
+  <span class="spacer"></span>
+  <input type="text" id="searchInput" placeholder="🔍 搜索居民..." />
+  <button class="btn" id="fullscreenBtn" title="全屏">⛶</button>
+</div>
+
+<!-- === Main Content === -->
+<div id="main">
+  <div id="map-area">
+    <canvas id="mapCanvas"></canvas>
+    <div class="map-hint">🖱 拖拽平移 · 滚轮缩放 · 双击复位</div>
+  </div>
+  <div id="sidebar">
+    <div id="chronicle-panel">
+      <div class="panel-header"><span class="tab-btn active" data-tab="chronicle">📜 编年史</span><span class="tab-btn" data-tab="relation">🔗 关系图</span></div>
+      <div id="chronicle-list"></div>
+      <div id="relationship-view" style="display:none;padding:8px;background:var(--bg-card);border-radius:4px;font-size:12px;color:var(--text-on-dark);margin:8px;"></div>
+    </div>
+    <div id="dashboard-panel">
+      <div class="panel-header">📊 仪表盘</div>
+      <div id="dashboard-grid">
+        <div class="dash-item"><div class="label">💰 货币总量</div><div class="value" id="dashCurrency">—</div></div>
+        <div class="dash-item"><div class="label">📈 年贸易额</div><div class="value" id="dashTrade">—</div></div>
+        <div class="dash-item"><div class="label">👥 总人口</div><div class="value" id="dashPopulation">—</div></div>
+        <div class="dash-item"><div class="label">⚖️ 法律</div><div class="value" id="dashLaws">—</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- === Agent Modal === -->
+<div id="agent-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modalName">—</h2>
+      <div class="sub" id="modalSub">—</div>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- === Building Modal === -->
+<div id="building-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="buildingModalName">—</h2>
+      <div class="sub" id="buildingModalSub">—</div>
+      <button class="modal-close" id="buildingModalClose">×</button>
+    </div>
+    <div class="modal-body" id="building-modal-body"></div>
+  </div>
+</div>
+
+<!-- === Building Tooltip === -->
+<div id="building-tooltip" style="display:none;position:fixed;background:var(--bg-panel);border:1px solid var(--wood-light);border-radius:4px;padding:8px 12px;font-size:12px;z-index:500;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,0.4);color:var(--text-on-dark);max-width:200px;line-height:1.5;"></div>
+<div id="agent-tooltip" style="display:none;position:fixed;background:var(--bg-panel);border:1px solid var(--accent-gold);border-radius:4px;padding:6px 10px;font-size:11px;z-index:500;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,0.4);color:var(--text-on-dark);max-width:180px;line-height:1.4;"></div>
+
+<!-- === Notification Feed === -->
+<div id="notification-feed" style="position:fixed;bottom:12px;right:12px;width:280px;z-index:900;display:flex;flex-direction:column;gap:4px;pointer-events:none;"></div>
+
+<script>
+/* === Data Loader === */
+window.__STATE__ = { data: null, agents: {}, buildings: {}, tileColors: {}, _hoveredBuildingId: null, _hoveredAgentId: null, _mouseTileX: -1, _mouseTileY: -1 };
+
+const COLOR = {
+  plains: '#a8e6cf', forest: '#4a9e3f', water: '#3d84a8',
+  mountain: '#8B8682', farmland: '#d4a373', road: '#e8d5a3',
+  desert: '#e6c280', tundra: '#c4d1e0',
+  springTint: [1.0, 1.0, 0.95]
+};
+
+function valueNoise(x, y, seed) {
+  const n = Math.sin(x * 12.9898 + y * 78.233 + seed * 45.164) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+const SEVERITY_ICONS = { epochal: '🌟', dramatic: '⚡', notable: '📜', peaceful: '🌿' };
+const SEASON_NAMES = { spring: '🌸 春季', summer: '☀️ 夏季', autumn: '🍂 秋季', winter: '❄️ 冬季' };
+const SEASON_ICONS = { spring: '🌸', summer: '☀️', autumn: '🍂', winter: '❄️' };
+
+function getTileSize() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--tile-size').trim();
+  const value = parseFloat(raw);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : 28;
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('data/last-save.json?_=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    window.__STATE__.data = data;
+    // Index agents and buildings by id
+    if (data.agents) data.agents.forEach(a => { window.__STATE__.agents[a.id] = a; });
+    if (data.buildings) data.buildings.forEach(b => { window.__STATE__.buildings[b.id] = b; });
+    console.log(`✅ 数据加载成功 | Year ${data.year} · ${data.season} · ${data.agents?.length || 0} 居民 · ${data.buildings?.length || 0} 建筑 · ${data.chronicle?.length || 0} 条编年史`);
+    onDataReady(data);
+    return data;
+  } catch (e) {
+    console.error('❌ 数据加载失败:', e);
+    document.getElementById('map-area').innerHTML = `<div style="padding:40px;text-align:center;color:#888;">❌ 数据加载失败: ${e.message}</div>`;
+  }
+}
+
+function onDataReady(d) {
+  // Update top bar
+  document.getElementById('seasonIcon').textContent = SEASON_ICONS[d.season] || '🌸';
+  document.getElementById('seasonText').textContent = SEASON_NAMES[d.season] || d.season;
+  document.getElementById('yearDisplay').textContent = d.year;
+  // Dashboard
+  if (d.economy) {
+    document.getElementById('dashCurrency').textContent = (d.economy.totalCurrency || 0).toLocaleString() + ' 文';
+    document.getElementById('dashTrade').textContent = (d.economy.annualTradeVolume || 0).toLocaleString();
+  }
+  const alive = d.agents ? d.agents.filter(a => a.alive !== false).length : 0;
+  const total = d.agents ? d.agents.length : 0;
+  document.getElementById('dashPopulation').textContent = `${alive} / ${total}`;
+  document.getElementById('dashLaws').textContent = (d.laws?.length || 0) + ' 部';
+  // Phase A: initialize resident micro-patrol animation state
+  initAgentAnimations(d);
+  // Chronicle
+  renderChronicle(d.chronicle);
+  // Sprite generation (Phase S)
+  generateSprites(d);
+  // Map
+  initMap(d);
+}
+
+/* === Phase S: Sprite Generator (48x48 Pixel Art Sprites) === */
+const SPRITE_W = 48;
+const SPRITE_H = 48;
+
+window.__SPRITES__ = { agents: {}, buildings: {} };
+
+function generateSprites(d) {
+  window.__SPRITES__ = { agents: {}, buildings: {} };
+  if (d.agents) {
+    for (const a of d.agents) {
+      const hash = hashString(`${a.title || ''}:${a.name || a.id || ''}`);
+      generateAgentSprites(a, hash);
+    }
+  }
+  if (d.buildings) {
+    for (const b of d.buildings) {
+      generateBuildingSprite(b);
+    }
+  }
+}
+
+/* --- Agent Sprite Generation --- */
+function generateAgentSprites(a, hash) {
+  const bodyColor = JOB_COLORS[a.title] || '#7f8c8d';
+  const palette = {
+    hairType: hash % 4,
+    h: AGENT_HAIR_COLORS[(hash >> 2) % AGENT_HAIR_COLORS.length],
+    s: AGENT_SKIN_COLORS[(hash >> 4) % AGENT_SKIN_COLORS.length],
+    c: bodyColor,
+    a: lightenColor(bodyColor, 30),
+    p: darkenColor(bodyColor, 28),
+    b: '#5a3a1a',
+    i: '#111111',
+    m: '#cc6666'
+  };
+  const dirs = ['S', 'N', 'E', 'W'];
+  window.__SPRITES__.agents[a.id] = {};
+  for (const dir of dirs) {
+    window.__SPRITES__.agents[a.id][dir] = [];
+    for (let frame = 0; frame < 4; frame++) {
+      const c = document.createElement('canvas');
+      c.width = SPRITE_W;
+      c.height = SPRITE_H;
+      const ctx = c.getContext('2d');
+      drawAgentSprite(ctx, dir, frame, palette, a);
+      window.__SPRITES__.agents[a.id][dir][frame] = c;
+    }
+  }
+}
+
+function drawAgentSprite(ctx, dir, frame, p, agent) {
+  const h = p.h, s = p.s, c = p.c;
+  const a = p.a, p2 = p.p, b = p.b, i = p.i;
+  if (dir === 'S') drawAgentSouth(ctx, frame, h, s, c, a, p2, b, i);
+  else if (dir === 'N') drawAgentNorth(ctx, frame, h, s, c, a, p2, b, i);
+  else if (dir === 'E' || dir === 'W') drawAgentSide(ctx, frame, h, s, c, a, p2, b, i, dir);
+}
+
+function drawAgentSouth(ctx, f, h, s, c, a, p2, b, i) {
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(25, 46, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Legs
+  const lShift = f === 1 ? 2 : (f === 3 ? -2 : 0);
+  ctx.fillStyle = p2;
+  ctx.fillRect(18 + lShift, 30, 5, 8);
+  ctx.fillRect(25 - lShift, 30, 5, 8);
+  ctx.fillRect(18, 37, 7, 5);
+  ctx.fillRect(25, 37, 7, 5);
+  // Shoes
+  ctx.fillStyle = b;
+  ctx.fillRect(18, 38, 7, 4);
+  ctx.fillRect(25, 38, 7, 4);
+  // Body
+  ctx.fillStyle = c;
+  ctx.fillRect(13, 16, 22, 14);
+  ctx.fillStyle = a;
+  ctx.fillRect(13, 16, 22, 3);
+  ctx.fillStyle = darkenColor(c, 15);
+  ctx.fillRect(13, 18, 3, 11);
+  ctx.fillRect(32, 18, 3, 11);
+  // Belt
+  ctx.fillStyle = darkenColor(c, 35);
+  ctx.fillRect(14, 29, 20, 3);
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(22, 29, 5, 3);
+  // Arms
+  const armShift = f === 1 ? 2 : (f === 3 ? -2 : 0);
+  ctx.fillStyle = s;
+  ctx.fillRect(8 + armShift, 17, 5, 12);
+  ctx.fillRect(35 - armShift, 17, 5, 12);
+  // Hair
+  ctx.fillStyle = h;
+  ctx.fillRect(14, 0, 20, 5);
+  ctx.fillRect(13, 4, 22, 3);
+  ctx.fillRect(12, 6, 4, 8);
+  ctx.fillRect(32, 6, 4, 8);
+  ctx.fillRect(13, 7, 22, 2);
+  // Face
+  ctx.fillStyle = s;
+  ctx.fillRect(16, 7, 16, 10);
+  ctx.fillRect(15, 8, 18, 8);
+  // Eyebrows
+  ctx.fillStyle = h;
+  ctx.fillRect(17, 8, 5, 1);
+  ctx.fillRect(26, 8, 5, 1);
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(17, 9, 6, 4);
+  ctx.fillRect(26, 9, 6, 4);
+  ctx.fillStyle = i;
+  ctx.fillRect(19, 10, 3, 2);
+  ctx.fillRect(28, 10, 3, 2);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(20, 10, 1, 1);
+  ctx.fillRect(29, 10, 1, 1);
+  // Mouth
+  ctx.fillStyle = '#cc6666';
+  ctx.fillRect(21, 14, 7, 2);
+  // Hat for 里正
+  if (agent && agent.title === '里正') {
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(14, -1, 20, 3);
+    ctx.fillRect(16, -2, 16, 1);
+  }
+}
+
+function drawAgentNorth(ctx, f, h, s, c, a, p2, b, i) {
+  const lShift = f === 1 ? 2 : (f === 3 ? -2 : 0);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(25, 46, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = p2;
+  ctx.fillRect(18 + lShift, 30, 5, 8);
+  ctx.fillRect(25 - lShift, 30, 5, 8);
+  ctx.fillRect(18, 37, 7, 5);
+  ctx.fillRect(25, 37, 7, 5);
+  ctx.fillStyle = c;
+  ctx.fillRect(13, 16, 22, 14);
+  ctx.fillStyle = a;
+  ctx.fillRect(13, 16, 22, 3);
+  ctx.fillStyle = darkenColor(c, 20);
+  ctx.fillRect(13, 18, 3, 11);
+  ctx.fillRect(32, 18, 3, 11);
+  ctx.fillStyle = h;
+  ctx.fillRect(13, 0, 22, 6);
+  ctx.fillRect(12, 5, 24, 11);
+  ctx.fillStyle = a;
+  ctx.fillRect(10, 16, 3, 6);
+  ctx.fillRect(35, 16, 3, 6);
+}
+
+function drawAgentSide(ctx, f, h, s, c, a, p2, b, i, dir) {
+  const mirror = dir === 'W';
+  const lShift = f === 1 ? 2 : (f === 3 ? -2 : 0);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(25, 46, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const lx = mirror ? 20 : 22;
+  ctx.fillStyle = p2;
+  ctx.fillRect(lx + lShift, 30, 6, 8);
+  ctx.fillRect(lx + (f === 2 ? 2 : 0), 37, 8, 5);
+  ctx.fillStyle = c;
+  ctx.fillRect(13, 16, 22, 14);
+  ctx.fillStyle = a;
+  ctx.fillRect(13, 16, 22, 3);
+  ctx.fillStyle = s;
+  const armX = mirror ? 8 : 35;
+  ctx.fillRect(armX + (f === 1 ? 1 : f === 3 ? -1 : 0), 17, 5, 11);
+  ctx.fillStyle = h;
+  ctx.fillRect(mirror ? 12 : 18, 0, 18, 6);
+  ctx.fillRect(mirror ? 11 : 17, 5, 5, 10);
+  ctx.fillRect(mirror ? 15 : 22, 5, 18, 4);
+  ctx.fillStyle = s;
+  ctx.fillRect(mirror ? 15 : 20, 6, 13, 10);
+  ctx.fillStyle = '#fff';
+  const ex = mirror ? 17 : 26;
+  ctx.fillRect(ex, 9, 4, 3);
+  ctx.fillStyle = i;
+  ctx.fillRect(ex + 1, 10, 2, 2);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(ex + 1, 10, 1, 1);
+}
+
+/* --- Building Sprite Generation --- */
+function generateBuildingSprite(b) {
+  const c = document.createElement('canvas');
+  c.width = SPRITE_W;
+  c.height = SPRITE_H;
+  const ctx = c.getContext('2d');
+  drawBuildingSprite(ctx, b);
+  window.__SPRITES__.buildings[b.id] = c;
+}
+
+function drawBuildingSprite(ctx, b) {
+  const colors = BLDG_COLORS[b.type] || BLDG_COLORS.residential;
+  const level = Math.min(b.level || 1, 3);
+  
+  // Ground
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  ctx.fillRect(0, 38, 48, 10);
+  
+  // Walls
+  const wallH = 14 - level;
+  const wallW = 28 + level * 4;
+  const wx = Math.floor((48 - wallW) / 2);
+  ctx.fillStyle = colors.wall;
+  ctx.fillRect(wx, 24 - level, wallW, wallH);
+  
+  // Wall detail
+  const wallLight = lightenColor(colors.wall, 15);
+  const wallDark = darkenColor(colors.wall, 15);
+  for (let r = 0; r < wallH; r++) {
+    for (let cw = 0; cw < wallW; cw += 4) {
+      ctx.fillStyle = ((r + cw/4) & 1) ? wallLight : wallDark;
+      ctx.fillRect(wx + cw, 24 - level + r, 3, 1);
+    }
+  }
+  
+  // Roof (triangle)
+  const roofW = 36 + level * 4;
+  const roofPeakY = 6 - level * 0.5;
+  ctx.fillStyle = colors.roof;
+  ctx.beginPath();
+  ctx.moveTo(24, roofPeakY);
+  ctx.lineTo(24 - roofW/2, 24 - level);
+  ctx.lineTo(24 + roofW/2, 24 - level);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Roof shingle lines
+  ctx.fillStyle = darkenColor(colors.roof, 20);
+  for (let r = Math.ceil(roofPeakY + 4); r < 24 - level; r += 4) {
+    const t = (r - roofPeakY) / (24 - level - roofPeakY);
+    const half = roofW/2 * t;
+    ctx.fillRect(24 - half, r, half * 2, 1);
+  }
+  
+  // Door
+  ctx.fillStyle = darkenColor(colors.wall, 40);
+  ctx.fillRect(20, 24 - level + wallH - 10, 8, 10);
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(26, 24 - level + wallH - 5, 2, 3);
+  
+  // Windows
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(wx + 3, 24 - level + 3, 6, 6);
+  ctx.fillRect(wx + wallW - 9, 24 - level + 3, 6, 6);
+  ctx.fillStyle = '#555';
+  ctx.fillRect(wx + 5, 24 - level + 3, 2, 6);
+  ctx.fillRect(wx + wallW - 7, 24 - level + 3, 2, 6);
+  
+  // Second floor window for higher levels
+  if (level >= 2) {
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(21, 24 - level + 2, 6, 5);
+    ctx.fillStyle = '#555';
+    ctx.fillRect(23, 24 - level + 2, 2, 5);
+    // Flower box
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(wx + 2, 24 - level + 9, 7, 2);
+    ctx.fillRect(wx + wallW - 9, 24 - level + 9, 7, 2);
+  }
+  
+  // Type-specific decorations
+  if (b.type === 'agriculture') {
+    ctx.fillStyle = '#5a8f4a';
+    ctx.fillRect(wx - 2, 32, 5, 8);
+    ctx.fillRect(wx + wallW - 3, 32, 5, 8);
+  } else if (b.type === 'commercial') {
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('商', 24, 18);
+  } else if (b.type === 'cultural') {
+    ctx.fillStyle = '#e8dcc8';
+    ctx.fillRect(wx - 4, 24 - level, 4, wallH);
+    ctx.fillRect(wx + wallW, 24 - level, 4, wallH);
+  } else if (b.type === 'civic') {
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(36, roofPeakY - 3, 2, 10);
+    ctx.fillRect(36, roofPeakY - 3, 6, 4);
+  } else if (b.type === 'residence' && level >= 3) {
+    ctx.fillStyle = '#8a6a4a';
+    ctx.fillRect(36, roofPeakY - 5, 6, 8);
+  }
+  
+  // Level stars
+  if (level > 1) {
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2605'.repeat(level), 24, 3);
+  }
+}
+
+/* === Phase A: Agent Animation State (ORIGINAL) === */
+function initAgentAnimations(d) {
+  if (!d.agents) return;
+  for (const a of d.agents) {
+    const seed = a.id.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+    window.__ANIM_STATE__.agents[a.id] = {
+      state: 'IDLE',
+      targetX: a.x, targetY: a.y,
+      displayX: a.x, displayY: a.y,
+      dir: 'S',
+      animFrame: 0,
+      idleTimer: 2 + (seed % 5),
+      interactTimer: 0,
+      seed: seed,
+      blinkTimer: 2000 + (seed % 3) * 1000,
+      blinkState: 0, // 0=open, 1=closed
+      blinkProgress: 0,
+      socialTarget: null,
+      socialTimer: 0,
+      isIdle: true
+    };
+  }
+  // Build interest points from building positions
+  window.__ANIM_STATE__.interestPoints = [];
+  if (d.buildings) {
+    for (const b of d.buildings) {
+      window.__ANIM_STATE__.interestPoints.push({
+        x: b.x, y: b.y, name: b.name, type: b.type, id: b.id
+      });
+    }
+  }
+}
+
+function updateAllAgents(season) {
+  const data = window.__STATE__._data;
+  if (!data || !data.agents) return;
+  const agents = window.__STATE__.agents;
+  const anims = window.__ANIM_STATE__.agents;
+  const points = window.__ANIM_STATE__.interestPoints || [];
+  const dt = 1/60; // assume 60fps
+  
+  for (const a of data.agents) {
+    if (a.alive === false) continue; // dead agents don't move
+    const anim = anims[a.id];
+    if (!anim) continue;
+    
+    // Update blink (independent of state)
+    anim.blinkTimer -= dt * 1000;
+    if (anim.blinkTimer <= 0 && anim.blinkState === 0) {
+      anim.blinkState = 1;
+      anim.blinkProgress = 0;
+      anim.blinkTimer = 200 + (anim.seed % 100);
+    }
+    if (anim.blinkState === 1) {
+      anim.blinkProgress += dt;
+      if (anim.blinkProgress > 0.15) {
+        anim.blinkState = 0;
+        anim.blinkTimer = 2000 + (anim.seed % 3) * 1000;
+      }
+    }
+    
+    // State machine
+    switch (anim.state) {
+      case 'IDLE':
+        anim.idleTimer -= dt;
+        if (anim.idleTimer <= 0) {
+          // Pick a target
+          const ipp = pickInterestPoint(a, anim, points);
+          if (ipp) {
+            anim.targetX = ipp.x;
+            anim.targetY = ipp.y;
+            anim.state = 'WALK';
+          } else {
+            // Random wander
+            const range = 3;
+            anim.targetX = Math.max(0, Math.min(window.__STATE__._cols - 1, a.x + (Math.random() - 0.5) * range * 2));
+            anim.targetY = Math.max(0, Math.min(window.__STATE__._rows - 1, a.y + (Math.random() - 0.5) * range * 2));
+            anim.state = 'WALK';
+          }
+        }
+        break;
+      case 'WALK':
+        const dx = anim.targetX - anim.displayX;
+        const dy = anim.targetY - anim.displayY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 0.05) {
+          // Arrived
+          anim.displayX = anim.targetX;
+          anim.displayY = anim.targetY;
+          anim.state = 'INTERACT';
+          anim.interactTimer = 2 + (anim.seed % 4);
+          anim.isIdle = true;
+        } else {
+          const moveSpeed = AGENT_SPEED * dt;
+          const step = Math.min(moveSpeed, dist);
+          anim.displayX += (dx / dist) * step;
+          anim.displayY += (dy / dist) * step;
+          // Direction
+          if (Math.abs(dx) > Math.abs(dy)) {
+            anim.dir = dx > 0 ? 'E' : 'W';
+          } else {
+            anim.dir = dy > 0 ? 'S' : 'N';
+          }
+          anim.animFrame = (anim.animFrame + 0.18) % 4;
+          anim.isIdle = false;
+        }
+        break;
+      case 'INTERACT':
+        anim.interactTimer -= dt;
+        if (anim.interactTimer <= 0) {
+          anim.state = 'IDLE';
+          anim.idleTimer = 3 + (anim.seed % 5);
+          anim.isIdle = true;
+          anim.animFrame = 0;
+        }
+        break;
+    }
+    
+    // Social encounter detection
+    anim.socialTarget = null;
+    for (const other of data.agents) {
+      if (other.id === a.id || other.alive === false) continue;
+      const otherAnim = anims[other.id];
+      if (!otherAnim) continue;
+      const sx = anim.displayX - otherAnim.displayX;
+      const sy = anim.displayY - otherAnim.displayY;
+      if (Math.sqrt(sx*sx + sy*sy) < 2.5) {
+        // Within social distance
+        if (anim.state === 'WALK') {
+          anim.state = 'IDLE';
+          anim.idleTimer = 3 + (anim.seed % 3);
+        }
+        anim.socialTarget = other.id;
+        anim.socialTimer = 0.5;
+        break;
+      }
+    }
+    if (anim.socialTarget) {
+      anim.socialTimer -= dt;
+      if (anim.socialTimer <= 0) anim.socialTarget = null;
+    }
+  }
+}
+
+function pickInterestPoint(a, anim, points) {
+  // Filter: avoid going to own building; prefer buildings of matching type
+  const candidates = points.filter(p => {
+    // Don't go to current position
+    return Math.abs(p.x - a.x) > 0.5 || Math.abs(p.y - a.y) > 0.5;
+  });
+  if (!candidates.length) return null;
+  // Prefer buildings; 70% chance to pick a building, 30% random
+  if (Math.random() < 0.7 && candidates.length) {
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+  // Random point near current position
+  return {
+    x: Math.max(0, Math.min(window.__STATE__._cols - 1, a.x + (Math.random() - 0.5) * 4)),
+    y: Math.max(0, Math.min(window.__STATE__._rows - 1, a.y + (Math.random() - 0.5) * 4))
+  };
+}
+
+/* === Chronicle === */
+function renderChronicle(entries) {
+  const list = document.getElementById('chronicle-list');
+  if (!entries || !entries.length) { list.innerHTML = '<div style="color:#666;padding:8px;">暂无编年史</div>'; return; }
+  let html = '';
+  let lastYear = null;
+  // Sort newest first
+  const sorted = [...entries].sort((a, b) => b.year - a.year);
+  for (const e of sorted) {
+    if (e.year !== lastYear) {
+      html += `<div class="chron-year-heading">Year ${e.year}</div>`;
+      lastYear = e.year;
+    }
+    const icon = SEVERITY_ICONS[e.severity] || '📄';
+    const sevClass = 'sev-' + (e.severity || 'peaceful');
+    html += `<div class="chron-entry ${sevClass}"><span class="sev-icon">${icon}</span><span class="chron-year-tag">Y${e.year}</span><span>${e.content}</span></div>`;
+  }
+  list.innerHTML = html;
+}
+
+/* === Map Renderer === */
+let mapState = { offsetX: 0, offsetY: 0, zoom: 1, dragging: false, dragStartX: 0, dragStartY: 0, startOffX: 0, startOffY: 0 };
+const TILE = 28; // px per tile
+/* === Phase B: Pixel Font Canvas Token === */
+const PIXELIFY_FONT = '"Pixelify Sans", monospace';
+/* === Phase A: Agent Animation State === */
+window.__ANIM_STATE__ = { agents: {} };
+const AGENT_SPEED = 1.2; // tiles per second
+let offscreenCanvas = null;
+let animationFrame = null;
+let waterPhase = 0;
+
+function initMap(d) {
+  const map = d.map;
+  if (!map || !map.tiles || !map.tiles.length) return;
+  const rows = map.tiles.length;    // 55
+  const cols = map.tiles[0].length; // 50
+  const mapW = cols * TILE;
+  const mapH = rows * TILE;
+  
+  // Build offscreen canvas with static tiles
+  offscreenCanvas = document.createElement('canvas');
+  offscreenCanvas.width = mapW;
+  offscreenCanvas.height = mapH;
+  const offCtx = offscreenCanvas.getContext('2d');
+  
+  // Simple seeded random for grass dots
+  function seededRandom(seed) {
+    let s = seed;
+    return function() { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+  }
+  const rng = seededRandom(42);
+  const grassDots = [];
+  for (let i = 0; i < rows * cols * 3; i++) grassDots.push(rng());
+  let dotIdx = 0;
+  
+  const W = mapW, H = mapH;
+  
+  // Draw terrain
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const tile = map.tiles[r][c];
+      const type = (typeof tile === 'object' ? tile.type : tile) || 'plains';
+      const x = c * TILE, y = r * TILE;
+      const color = COLOR[type] || '#666';
+      offCtx.fillStyle = color;
+      offCtx.fillRect(x, y, TILE, TILE);
+      
+      // Texture details
+      if (type === 'plains') {
+        offCtx.fillStyle = 'rgba(255,255,255,0.15)';
+        for (let i = 0; i < 2; i++) {
+          const dx = grassDots[dotIdx % grassDots.length] * (TILE - 2) + 1;
+          const dy = grassDots[(dotIdx + 1) % grassDots.length] * (TILE - 2) + 1;
+          offCtx.fillRect(x + dx, y + dy, 2, 2);
+          dotIdx += 2;
+        }
+      }
+      if (type === 'forest') {
+        // Tree trunk
+        offCtx.fillStyle = '#6B4226';
+        offCtx.fillRect(x + 11, y + 18, 6, 10);
+        // Canopy (triangle)
+        offCtx.fillStyle = '#2d6a1e';
+        offCtx.beginPath();
+        offCtx.moveTo(x + 14, y + 2);
+        offCtx.lineTo(x + 2, y + 20);
+        offCtx.lineTo(x + 26, y + 20);
+        offCtx.closePath();
+        offCtx.fill();
+        offCtx.fillStyle = '#3a8a2a';
+        offCtx.beginPath();
+        offCtx.moveTo(x + 14, y + 5);
+        offCtx.lineTo(x + 4, y + 20);
+        offCtx.lineTo(x + 24, y + 20);
+        offCtx.closePath();
+        offCtx.fill();
+      }
+      if (type === 'farmland') {
+        offCtx.fillStyle = 'rgba(139,69,19,0.15)';
+        for (let i = 0; i < 3; i++) {
+          offCtx.fillRect(x + 2, y + 4 + i * 8, TILE - 4, 2);
+        }
+      }
+      if (type === 'road') {
+        offCtx.fillStyle = 'rgba(139,119,80,0.3)';
+        offCtx.fillRect(x + 4, y + 4, TILE - 8, TILE - 8);
+      }
+      if (type === 'mountain') {
+        offCtx.fillStyle = 'rgba(0,0,0,0.1)';
+        offCtx.fillRect(x + 2, y + 10, 8, 2);
+        offCtx.fillRect(x + 18, y + 14, 6, 2);
+        offCtx.fillStyle = 'rgba(255,255,255,0.08)';
+        offCtx.fillRect(x + 8, y + 4, 4, 4);
+      }
+      
+      // Noise detail blocks for visual richness
+      if (type === 'plains' || type === 'forest' || type === 'tundra') {
+        const n1 = valueNoise(c, r, 1);
+        const n2 = valueNoise(c, r, 2);
+        const n3 = valueNoise(c, r, 3);
+        const n4 = valueNoise(c, r, 4);
+        if (n1 > 0.55) { offCtx.fillStyle = type === 'tundra' ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.1)'; offCtx.fillRect(x + Math.floor(n2 * 22), y + Math.floor(n3 * 22), 2, 2); }
+        if (n4 > 0.6) { offCtx.fillStyle = 'rgba(0,0,0,0.06)'; offCtx.fillRect(x + Math.floor(n3 * 24), y + Math.floor(n2 * 24), 2, 2); }
+      }
+      
+      // Fertility glow
+      if (typeof tile === 'object' && tile.fertility && tile.fertility > 0.6) {
+        offCtx.fillStyle = 'rgba(255,255,200,0.08)';
+        offCtx.fillRect(x, y, TILE, TILE);
+      }
+      // Resource marker
+      if (typeof tile === 'object' && tile.resource) {
+        offCtx.fillStyle = '#ffd700';
+        offCtx.beginPath();
+        offCtx.arc(x + 14, y + 14, 3, 0, Math.PI * 2);
+        offCtx.fill();
+      }
+    }
+  }
+  
+  // Build a water mask for animation
+  window.__STATE__._waterTiles = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const tile = map.tiles[r][c];
+      const type = (typeof tile === 'object' ? tile.type : tile) || 'plains';
+      if (type === 'water') {
+        window.__STATE__._waterTiles.push({ r, c, x: c * TILE, y: r * TILE });
+      }
+    }
+  }
+  
+  window.__STATE__._mapW = mapW;
+  window.__STATE__._mapH = mapH;
+  window.__STATE__._rows = rows;
+  window.__STATE__._cols = cols;
+  window.__STATE__._offCanvas = offscreenCanvas;
+  window.__STATE__._data = d;
+  
+  // Canvas setup
+  const canvas = document.getElementById('mapCanvas');
+  const container = document.getElementById('map-area');
+  
+  function resizeCanvas() {
+    const rect = container.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    renderFrame();
+  }
+  
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+  
+  // Mouse events
+  canvas.addEventListener('mousedown', onMouseDown);
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('mouseleave', onMouseUp);
+  canvas.addEventListener('wheel', onWheel, { passive: false });
+  canvas.addEventListener('dblclick', onDoubleClick);
+  
+  // Start animation loop
+  if (animationFrame) cancelAnimationFrame(animationFrame);
+  function animate() {
+    waterPhase = (waterPhase + 0.02) % (Math.PI * 2);
+    updateAllAgents(d.season);
+    updateTopbarStatus();
+    renderFrame();
+    animationFrame = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function renderFrame() {
+  const canvas = document.getElementById('mapCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  
+  const off = offscreenCanvas;
+  if (!off) return;
+  const mapW = window.__STATE__._mapW;
+  const mapH = window.__STATE__._mapH;
+  
+  const { offsetX, offsetY, zoom } = mapState;
+  
+  // Draw terrain (off-screen)
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(zoom, zoom);
+  ctx.drawImage(off, 0, 0);
+  
+  // Draw buildings
+  const data = window.__STATE__._data;
+  if (data && data.buildings) {
+    for (const b of data.buildings) {
+      drawBuilding(ctx, b);
+    }
+  }
+  
+  // Draw agents
+  if (data && data.agents) {
+    for (const a of data.agents) {
+      drawAgent(ctx, a);
+    }
+  }
+  
+  // Water animation overlay
+  const waterTiles = window.__STATE__._waterTiles || [];
+  for (const wt of waterTiles) {
+    const px = wt.x, py = wt.y;
+    const waveY = Math.sin(wt.r * 0.5 + wt.c * 0.3 + waterPhase) * 1.5;
+    ctx.fillStyle = `rgba(180, 220, 255, ${0.1 + Math.sin(wt.r + wt.c * 0.7 + waterPhase * 2) * 0.05})`;
+    ctx.fillRect(px, py + waveY, TILE, 3);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.08 + Math.sin(wt.r * 0.3 + wt.c + waterPhase) * 0.04})`;
+    ctx.fillRect(px + 5, py + 6 + waveY * 0.5, 8, 2);
+  }
+  
+  // Season tint overlay
+  const seasonTints = {spring:'rgba(180,230,180,0.06)', summer:'rgba(255,240,180,0.05)', autumn:'rgba(230,180,120,0.08)', winter:'rgba(200,210,240,0.10)'};
+  const st = seasonTints[data?.season] || '';
+  if (st) { ctx.fillStyle = st; ctx.fillRect(0, 0, mapW, mapH); }
+  
+  // Day/night cycle
+  const dayNightPhase = ((Date.now() % 30000) / 30000);
+  let nightAlpha = 0;
+  if (dayNightPhase > 0.2 && dayNightPhase < 0.35) nightAlpha = (dayNightPhase - 0.2) / 0.15 * 0.25;
+  else if (dayNightPhase >= 0.35 && dayNightPhase < 0.55) nightAlpha = 0.25 + (dayNightPhase - 0.35) / 0.2 * 0.1;
+  else if (dayNightPhase >= 0.55 && dayNightPhase < 0.7) nightAlpha = 0.35 - (dayNightPhase - 0.55) / 0.15 * 0.35;
+  if (nightAlpha > 0) { ctx.fillStyle = `rgba(10,10,30,${nightAlpha})`; ctx.fillRect(0, 0, mapW, mapH); }
+  window.__STATE__._nightAlpha = nightAlpha;
+  
+  ctx.restore();
+  
+  // Vignette
+  const grad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.3, W/2, H/2, Math.max(W,H)*0.6);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+/* === Phase B: Pixel Building and Agent Sprites === */
+function darkenColor(hex, amount) {
+  if (!hex || typeof hex !== 'string' || hex[0] !== '#') return hex || '#000';
+  const normalized = hex.length === 4 ? '#' + hex.slice(1).split('').map(ch => ch + ch).join('') : hex;
+  const num = parseInt(normalized.slice(1), 16);
+  if (Number.isNaN(num)) return '#000';
+  const r = Math.max(0, (num >> 16) - amount);
+  const g = Math.max(0, ((num >> 8) & 0xff) - amount);
+  const b = Math.max(0, (num & 0xff) - amount);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+function lightenColor(hex, amount) {
+  if (!hex || typeof hex !== 'string' || hex[0] !== '#') return hex || '#fff';
+  const normalized = hex.length === 4 ? '#' + hex.slice(1).split('').map(ch => ch + ch).join('') : hex;
+  const num = parseInt(normalized.slice(1), 16);
+  if (Number.isNaN(num)) return '#fff';
+  const r = Math.min(255, (num >> 16) + amount);
+  const g = Math.min(255, ((num >> 8) & 0xff) + amount);
+  const b = Math.min(255, (num & 0xff) + amount);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+function hashString(value) {
+  let h = 2166136261;
+  const str = String(value || '');
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+const AGENT_HAIR_COLORS = ['#4a3728', '#1a1a1a', '#8B4513', '#DAA520'];
+const AGENT_SKIN_COLORS = ['#ffd3b6', '#f5cba7', '#deb887', '#e8d5b0'];
+
+function makeGrid() {
+  return Array.from({ length: 16 }, () => Array(16).fill('0'));
+}
+
+function setGridCell(grid, row, col, code) {
+  if (row >= 0 && row < 16 && col >= 0 && col < 16) grid[row][col] = code;
+}
+
+function fillGridRect(grid, row, col, width, height, code) {
+  for (let r = row; r < row + height; r++) {
+    for (let c = col; c < col + width; c++) setGridCell(grid, r, c, code);
+  }
+}
+
+function mirrorGrid(grid) {
+  return grid.map(row => [...row].reverse());
+}
+
+function buildSouthAgentGrid(frame, hairType, palette, anim) {
+  const g = makeGrid();
+  const h = palette.h;
+  const s = palette.s;
+  const c = palette.c;
+  const a = palette.a;
+  const p = palette.p;
+  const b = palette.b;
+  const i = palette.i;
+  const m = palette.m;
+
+  if (hairType === 0) {
+    fillGridRect(g, 0, 5, 6, 1, h);
+    fillGridRect(g, 1, 3, 10, 1, h);
+    fillGridRect(g, 2, 2, 3, 1, h);
+    fillGridRect(g, 2, 11, 3, 1, h);
+  } else if (hairType === 1) {
+    fillGridRect(g, 0, 5, 6, 1, h);
+    fillGridRect(g, 1, 3, 10, 1, h);
+    fillGridRect(g, 2, 2, 12, 1, h);
+    fillGridRect(g, 3, 1, 2, 1, h);
+    fillGridRect(g, 3, 13, 2, 1, h);
+    setGridCell(g, 4, 1, h);
+    setGridCell(g, 4, 14, h);
+  } else if (hairType === 2) {
+    fillGridRect(g, 0, 5, 6, 1, h);
+    fillGridRect(g, 1, 3, 10, 1, h);
+    fillGridRect(g, 2, 2, 12, 1, h);
+    fillGridRect(g, 3, 2, 2, 1, h);
+    fillGridRect(g, 3, 12, 2, 1, h);
+    setGridCell(g, 4, 2, h);
+    setGridCell(g, 4, 13, h);
+  } else {
+    setGridCell(g, 2, 2, h);
+    setGridCell(g, 2, 13, h);
+    setGridCell(g, 3, 2, h);
+    setGridCell(g, 3, 13, h);
+  }
+
+  fillGridRect(g, 3, 4, 8, 2, s);
+  if (anim && anim.blinkState === 1) {
+    setGridCell(g, 3, 5, s);
+    setGridCell(g, 3, 10, s);
+  } else {
+    setGridCell(g, 3, 5, i);
+    setGridCell(g, 3, 10, i);
+  }
+  fillGridRect(g, 4, 7, 2, 1, m);
+
+  const shift = frame === 1 ? 1 : (frame === 3 ? -1 : 0);
+  if (frame === 1) {
+    fillGridRect(g, 5, 0, 1, 3, c);
+    fillGridRect(g, 5, 14, 1, 2, c);
+  } else if (frame === 3) {
+    fillGridRect(g, 5, 1, 1, 2, c);
+    fillGridRect(g, 5, 15, 1, 3, c);
+  } else {
+    fillGridRect(g, 5, 1, 1, 4, c);
+    fillGridRect(g, 5, 14, 1, 4, c);
+    if (frame === 2) {
+      setGridCell(g, 8, 0, c);
+      setGridCell(g, 8, 15, c);
+    }
+  }
+
+  fillGridRect(g, 5, 2 + shift, 12, 1, c);
+  fillGridRect(g, 6, 2 + shift, 12, 3, c);
+  fillGridRect(g, 9, 2, 12, 1, a);
+  fillGridRect(g, 10, 3, 10, 2, p);
+
+  if (frame === 1) {
+    fillGridRect(g, 12, 3, 2, 1, p);
+    fillGridRect(g, 13, 3, 1, 1, p);
+    fillGridRect(g, 14, 2, 2, 1, p);
+    fillGridRect(g, 15, 2, 2, 1, b);
+    fillGridRect(g, 12, 11, 2, 1, p);
+    fillGridRect(g, 13, 12, 1, 1, p);
+    fillGridRect(g, 14, 12, 2, 1, p);
+    fillGridRect(g, 15, 12, 2, 1, b);
+  } else if (frame === 3) {
+    fillGridRect(g, 12, 3, 2, 1, p);
+    fillGridRect(g, 13, 4, 1, 1, p);
+    fillGridRect(g, 14, 4, 2, 1, p);
+    fillGridRect(g, 15, 4, 2, 1, b);
+    fillGridRect(g, 12, 11, 2, 1, p);
+    fillGridRect(g, 13, 12, 1, 1, p);
+    fillGridRect(g, 14, 12, 2, 1, p);
+    fillGridRect(g, 15, 12, 2, 1, b);
+  } else {
+    fillGridRect(g, 12, 4, 2, 1, p);
+    fillGridRect(g, 13, 4, 2, 1, p);
+    fillGridRect(g, 14, 4, 2, 1, p);
+    fillGridRect(g, 15, 4, 2, 1, b);
+    fillGridRect(g, 12, 10, 2, 1, p);
+    fillGridRect(g, 13, 10, 2, 1, p);
+    fillGridRect(g, 14, 10, 2, 1, p);
+    fillGridRect(g, 15, 10, 2, 1, b);
+  }
+
+  return g;
+}
+
+function buildNorthAgentGrid(frame, hairType, palette) {
+  const g = makeGrid();
+  const h = palette.h;
+  const s = palette.s;
+  const c = palette.c;
+  const a = palette.a;
+  const p = palette.p;
+  const b = palette.b;
+
+  if (hairType === 0) {
+    fillGridRect(g, 0, 5, 6, 1, h);
+    fillGridRect(g, 1, 3, 10, 1, h);
+    fillGridRect(g, 2, 2, 12, 1, h);
+    fillGridRect(g, 3, 2, 12, 1, h);
+  } else if (hairType === 1) {
+    fillGridRect(g, 0, 5, 6, 1, h);
+    fillGridRect(g, 1, 3, 10, 1, h);
+    fillGridRect(g, 2, 2, 12, 1, h);
+    fillGridRect(g, 3, 1, 14, 1, h);
+    fillGridRect(g, 4, 1, 14, 1, h);
+  } else if (hairType === 2) {
+    fillGridRect(g, 0, 5, 6, 1, h);
+    fillGridRect(g, 1, 3, 10, 1, h);
+    fillGridRect(g, 2, 2, 12, 1, h);
+    fillGridRect(g, 3, 2, 12, 1, h);
+  } else {
+    fillGridRect(g, 2, 2, 12, 1, s);
+    fillGridRect(g, 3, 2, 12, 1, s);
+  }
+
+  const shift = frame === 1 ? 1 : (frame === 3 ? -1 : 0);
+  fillGridRect(g, 5, 1, 1, 4, c);
+  fillGridRect(g, 5, 14, 1, 4, c);
+  fillGridRect(g, 5, 2 + shift, 12, 1, c);
+  fillGridRect(g, 6, 2 + shift, 12, 3, c);
+  fillGridRect(g, 9, 2, 12, 1, a);
+  fillGridRect(g, 10, 3, 10, 2, p);
+
+  if (frame === 1) {
+    fillGridRect(g, 12, 3, 2, 1, p);
+    fillGridRect(g, 13, 3, 1, 1, p);
+    fillGridRect(g, 14, 2, 2, 1, p);
+    fillGridRect(g, 15, 2, 2, 1, b);
+    fillGridRect(g, 12, 11, 2, 1, p);
+    fillGridRect(g, 13, 12, 1, 1, p);
+    fillGridRect(g, 14, 12, 2, 1, p);
+    fillGridRect(g, 15, 12, 2, 1, b);
+  } else if (frame === 3) {
+    fillGridRect(g, 12, 3, 2, 1, p);
+    fillGridRect(g, 13, 4, 1, 1, p);
+    fillGridRect(g, 14, 4, 2, 1, p);
+    fillGridRect(g, 15, 4, 2, 1, b);
+    fillGridRect(g, 12, 11, 2, 1, p);
+    fillGridRect(g, 13, 12, 1, 1, p);
+    fillGridRect(g, 14, 12, 2, 1, p);
+    fillGridRect(g, 15, 12, 2, 1, b);
+  } else {
+    fillGridRect(g, 12, 4, 2, 1, p);
+    fillGridRect(g, 13, 4, 2, 1, p);
+    fillGridRect(g, 14, 4, 2, 1, p);
+    fillGridRect(g, 15, 4, 2, 1, b);
+    fillGridRect(g, 12, 10, 2, 1, p);
+    fillGridRect(g, 13, 10, 2, 1, p);
+    fillGridRect(g, 14, 10, 2, 1, p);
+    fillGridRect(g, 15, 10, 2, 1, b);
+  }
+
+  return g;
+}
+
+function buildSideAgentGrid(frame, hairType, palette, dir) {
+  const g = makeGrid();
+  const h = palette.h;
+  const s = palette.s;
+  const c = palette.c;
+  const a = palette.a;
+  const p = palette.p;
+  const b = palette.b;
+  const i = palette.i;
+  const m = palette.m;
+
+  fillGridRect(g, 0, 5, 6, 1, h);
+  fillGridRect(g, 1, 4, 8, 1, h);
+  fillGridRect(g, 2, 3, 9, 1, h);
+  fillGridRect(g, 3, 3, 8, 1, h);
+  if (hairType === 1) {
+    fillGridRect(g, 3, 2, 10, 1, h);
+    setGridCell(g, 4, 2, h);
+  }
+
+  fillGridRect(g, 3, 5, 7, 2, s);
+  setGridCell(g, 3, 7, i);
+  fillGridRect(g, 4, 8, 2, 1, m);
+
+  const nearArmCol = dir === 'E' ? 12 : 3;
+  const farArmCol = dir === 'E' ? 2 : 13;
+
+  fillGridRect(g, 5, 3, 10, 1, c);
+  fillGridRect(g, 6, 3, 10, 3, c);
+  if (frame === 1) {
+    fillGridRect(g, 5, farArmCol, 1, 2, c);
+    fillGridRect(g, 5, nearArmCol, 1, 4, c);
+  } else if (frame === 3) {
+    fillGridRect(g, 5, farArmCol, 1, 4, c);
+    fillGridRect(g, 5, nearArmCol, 1, 2, c);
+  } else {
+    fillGridRect(g, 5, farArmCol, 1, 4, c);
+    fillGridRect(g, 5, nearArmCol, 1, 4, c);
+  }
+
+  fillGridRect(g, 9, 3, 10, 1, a);
+  fillGridRect(g, 10, 4, 8, 2, p);
+
+  if (frame === 1) {
+    fillGridRect(g, 12, 5, 2, 1, p);
+    fillGridRect(g, 13, 5, 2, 1, p);
+    fillGridRect(g, 14, 5, 2, 1, p);
+    fillGridRect(g, 15, 5, 2, 1, b);
+    fillGridRect(g, 12, 9, 3, 1, p);
+    fillGridRect(g, 13, 10, 2, 1, p);
+    fillGridRect(g, 14, 10, 2, 1, p);
+    fillGridRect(g, 15, 10, 2, 1, b);
+  } else if (frame === 3) {
+    fillGridRect(g, 12, 5, 3, 1, p);
+    fillGridRect(g, 13, 5, 2, 1, p);
+    fillGridRect(g, 14, 5, 2, 1, p);
+    fillGridRect(g, 15, 5, 2, 1, b);
+    fillGridRect(g, 12, 9, 2, 1, p);
+    fillGridRect(g, 13, 9, 2, 1, p);
+    fillGridRect(g, 14, 9, 2, 1, p);
+    fillGridRect(g, 15, 9, 2, 1, b);
+  } else {
+    fillGridRect(g, 12, 5, 2, 1, p);
+    fillGridRect(g, 13, 5, 2, 1, p);
+    fillGridRect(g, 14, 5, 2, 1, p);
+    fillGridRect(g, 15, 5, 2, 1, b);
+    fillGridRect(g, 12, 9, 2, 1, p);
+    fillGridRect(g, 13, 9, 2, 1, p);
+    fillGridRect(g, 14, 9, 2, 1, p);
+    fillGridRect(g, 15, 9, 2, 1, b);
+  }
+
+  return dir === 'W' ? mirrorGrid(g) : g;
+}
+
+function createAgentGrid(dir, frame, hairType, palette, anim) {
+  if (dir === 'N') return buildNorthAgentGrid(frame, hairType, palette);
+  if (dir === 'W' || dir === 'E') return buildSideAgentGrid(frame, hairType, palette, dir);
+  return buildSouthAgentGrid(frame, hairType, palette, anim);
+}
+
+function drawPixelAgent(ctx, x, y, dir, frame, bodyColor, palette, anim) {
+  // Use sprite cache
+  const spriteSheets = window.__SPRITES__?.agents;
+  if (!spriteSheets) {
+    // Fallback to simple circle if sprites not ready
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  const aId = palette._agentId;
+  const dirMap = spriteSheets[aId];
+  if (dirMap && dirMap[dir] && dirMap[dir][frame]) {
+    ctx.drawImage(dirMap[dir][frame], x - SPRITE_W/2, y - SPRITE_H/2, SPRITE_W, SPRITE_H);
+  }
+}
+
+function drawPixelBuilding(ctx, b) {
+  const x = b.x * TILE + TILE/2 - 10;
+  const y = b.y * TILE + TILE/2 - 8;
+  const colors = BLDG_COLORS[b.type] || BLDG_COLORS.residential;
+  const roofDark = darkenColor(colors.roof, 18);
+
+  ctx.fillStyle = colors.roof;
+  for (let row = 0; row <= 4; row++) {
+    const halfWidth = 10 - row;
+    for (let col = -halfWidth; col <= halfWidth; col++) {
+      ctx.fillStyle = ((row + col) & 1) === 0 ? colors.roof : roofDark;
+      ctx.fillRect(x + 10 + col, y + row, 1, 1);
+    }
+  }
+
+  ctx.fillStyle = colors.wall;
+  for (let row = 5; row <= 13; row++) {
+    for (let col = 1; col <= 18; col++) {
+      ctx.fillStyle = ((row + col) & 1) === 0 ? colors.wall : lightenColor(colors.wall, 8);
+      ctx.fillRect(x + col, y + row, 1, 1);
+    }
+  }
+  
+  // Building weathering: moss patches
+  const bHash = hashString(b.id || b.name || '');
+  for (let i = 0; i < 2; i++) {
+    const mossSeed = (bHash >> (i * 4)) & 0xff;
+    const mx = 2 + (mossSeed % 15);
+    const my = 6 + ((mossSeed >> 4) % 7);
+    const shade = (mossSeed & 1) ? 'rgba(50,120,40,0.25)' : 'rgba(70,140,60,0.2)';
+    ctx.fillStyle = shade;
+    ctx.fillRect(x + mx, y + my, 2, 2);
+  }
+
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(x + 3, y + 6, 4, 3);
+  ctx.fillRect(x + 13, y + 6, 4, 3);
+  ctx.fillStyle = '#8B7355';
+  ctx.fillRect(x + 5, y + 6, 1, 3);
+  ctx.fillRect(x + 15, y + 6, 1, 3);
+
+  ctx.fillStyle = colors.roof;
+  ctx.fillRect(x + 7, y + 9, 6, 5);
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(x + 9, y + 11, 2, 1);
+
+  ctx.fillStyle = '#6B4226';
+  ctx.fillRect(x + 0, y, 3, 6);
+
+  if (b.level > 1) {
+    ctx.fillStyle = '#ffd700';
+    ctx.font = `7px ${PIXELIFY_FONT}`;
+    for (let i = 0; i < Math.min(b.level, 3); i++) {
+      ctx.fillText('★', x + 5 + i * 6, y - 3);
+    }
+  }
+
+  const nx = b.x * TILE + TILE/2;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(nx - 18, y + 16, 36, 10);
+  ctx.fillStyle = '#fff';
+  ctx.font = `8px ${PIXELIFY_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.fillText(b.name, nx, y + 24);
+}
+
+/* === Building Sprites === */
+const BLDG_COLORS = {
+  agriculture: { wall: '#5a8f4a', roof: '#a0764a' },
+  industrial: { wall: '#8a7a6a', roof: '#5a4a3a' },
+  commercial: { wall: '#c45a4a', roof: '#8a3a2a' },
+  residential: { wall: '#d4b85a', roof: '#a08a3a' },
+  civic: { wall: '#4a7ab5', roof: '#2a5a8a' },
+  culture: { wall: '#8a5a9a', roof: '#6a3a7a' }
+};
+
+function drawBuilding(ctx, b) {
+  // Shadow under building
+  const nx = b.x * TILE + TILE/2;
+  const ny = b.y * TILE + TILE/2 - 4;
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(nx, ny + SPRITE_H/2 - 4, 14, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Use building sprite cache
+  const sprites = window.__SPRITES__?.buildings;
+  const sprite = sprites && sprites[b.id];
+  if (sprite) {
+    ctx.drawImage(sprite, nx - SPRITE_W/2, ny - SPRITE_H/2, SPRITE_W, SPRITE_H);
+  } else {
+    // Fallback to procedural
+    drawPixelBuilding(ctx, b);
+  }
+  
+  // Building hover glow
+  if (window.__STATE__._hoveredBuildingId === b.id) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,215,0,0.5)';
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = 'rgba(255,215,0,0.7)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(b.x * TILE - 4, b.y * TILE - 4, TILE + 8, TILE + 8);
+    ctx.restore();
+  }
+}
+
+/* === Agent Sprites === */
+const JOB_COLORS = {
+  '里正': '#c0392b', '工匠': '#8e44ad', '商人': '#2980b9',
+  '农夫': '#27ae60', '猎人': '#d35400', '渔夫': '#16a085',
+  '医者': '#e67e22', '教书': '#2c3e50', '无业': '#7f8c8d'
+};
+
+function drawAgent(ctx, a) {
+  const anim = window.__ANIM_STATE__?.agents?.[a.id];
+  const tx = anim ? anim.displayX : a.x;
+  const ty = anim ? anim.displayY : a.y;
+  if (tx === undefined || ty === undefined) return;
+
+  const dir = anim ? anim.dir : 'S';
+  const frame = anim ? Math.floor(anim.animFrame) : 0;
+
+  const x = tx * TILE + TILE/2;
+  const breatheOffset = anim ? Math.sin(Date.now() / 300 + anim.seed) * 1.5 : 0;
+  const y = ty * TILE + TILE/2 - 4 + breatheOffset;
+
+  const alpha = a.alive !== false ? 1.0 : 0.4;
+  ctx.globalAlpha = alpha;
+
+  const bodyColor = JOB_COLORS[a.title] || '#7f8c8d';
+  const hash = hashString(`${a.title || ''}:${a.name || a.id || ''}`);
+  const palette = {
+    hairType: hash % 4,
+    h: AGENT_HAIR_COLORS[(hash >> 2) % AGENT_HAIR_COLORS.length],
+    s: AGENT_SKIN_COLORS[(hash >> 4) % AGENT_SKIN_COLORS.length],
+    c: bodyColor,
+    a: lightenColor(bodyColor, 30),
+    p: darkenColor(bodyColor, 28),
+    b: '#5a3a1a',
+    i: '#111111',
+    m: '#cc6666',
+    _agentId: a.id
+  };
+
+  const walkBob = (!anim || anim.isIdle) ? 0 : Math.sin(frame * Math.PI / 2) * 1.5;
+
+  if (window.__STATE__._hoveredAgentId === a.id) {
+    ctx.fillStyle = 'rgba(255,215,0,0.2)';
+    ctx.beginPath();
+    ctx.arc(x, y - 2, 12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawPixelAgent(ctx, x, y + walkBob * 0.25, dir, frame, bodyColor, palette, anim);
+
+  if (a.alive === false) {
+    ctx.fillStyle = '#c0392b';
+    ctx.font = `8px ${PIXELIFY_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.fillText('✝', x, y - 17 + walkBob);
+  }
+
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(x - 20, y - 24 + walkBob, 40, 10);
+  ctx.fillStyle = '#fff';
+  ctx.font = `7px ${PIXELIFY_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.fillText(a.name || '', x, y - 16 + walkBob);
+
+  if (anim && anim.socialTarget) {
+    ctx.font = `10px ${PIXELIFY_FONT}`;
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText('💬', x, y - 30 + walkBob);
+  }
+
+  ctx.globalAlpha = 1.0;
+}
+
+/* === Map Interaction === */
+function onMouseDown(e) {
+  mapState.dragging = true;
+  mapState.dragStartX = e.clientX;
+  mapState.dragStartY = e.clientY;
+  mapState.startOffX = mapState.offsetX;
+  mapState.startOffY = mapState.offsetY;
+  // Check for agent click
+  const rect = e.target.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  checkAgentClick(mx, my);
+  // Check for building click
+  checkBuildingClick(mx, my);
+}
+
+function checkBuildingClick(mx, my) {
+  const tx = Math.floor((mx - mapState.offsetX) / (TILE * mapState.zoom));
+  const ty = Math.floor((my - mapState.offsetY) / (TILE * mapState.zoom));
+  const data = window.__STATE__._data;
+  if (!data || !data.buildings) return;
+  for (const b of data.buildings) {
+    if (Math.floor(b.x) === tx && Math.floor(b.y) === ty) {
+      showBuildingModal(b);
+      return;
+    }
+  }
+}
+
+function showBuildingModal(b) {
+  const modal = document.getElementById('building-modal');
+  const body = document.getElementById('building-modal-body');
+  if (!modal || !body) return;
+  
+  const level = b.level || 1;
+  const occId = b.occupantId;
+  const occName = occId ? (window.__STATE__.agents[occId]?.name || '未知') : '无';
+  const constructedYear = b.constructedYear || '—';
+  const typeIcons = { residence: '🏠', agriculture: '🌾', commercial: '💰', civic: '🏛', cultural: '🎭', industrial: '⚙️' };
+  const icon = typeIcons[b.type] || '🏗️';
+  
+  let html = `<div class="modal-building-header">
+    <span class="modal-building-icon">${icon}</span>
+    <span class="modal-building-name">${b.name || '未命名建筑'}</span>
+  </div>`;
+  html += `<div class="modal-section"><h3>📋 基本信息</h3>`;
+  html += `<div>类型：${b.type}</div>`;
+  html += `<div>等级：${'⭐'.repeat(level)}</div>`;
+  html += `<div>建造年份：${constructedYear}</div>`;
+  html += `<div>住户：${occName}</div>`;
+  html += '</div>';
+  
+  if (b.description) {
+    html += `<div class="modal-section"><h3>📖 描述</h3><div>${b.description}</div></div>`;
+  }
+  
+  if (b.production) {
+    html += `<div class="modal-section"><h3>⚙️ 产出</h3>`;
+    for (const [k, v] of Object.entries(b.production)) {
+      html += `<div>${k}: ${v}</div>`;
+    }
+    html += '</div>';
+  }
+  
+  body.innerHTML = html;
+  modal.classList.add('open');
+  notify('查看 ' + (b.name || '建筑'), 'info');
+}
+
+function onMouseMove(e) {
+  const rect = e.target.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const tx = (mx - mapState.offsetX) / (TILE * mapState.zoom);
+  const ty = (my - mapState.offsetY) / (TILE * mapState.zoom);
+  window.__STATE__._mouseTileX = tx;
+  window.__STATE__._mouseTileY = ty;
+
+  if (mapState.dragging) {
+    const dx = e.clientX - mapState.dragStartX;
+    const dy = e.clientY - mapState.dragStartY;
+    mapState.offsetX = mapState.startOffX + dx;
+    mapState.offsetY = mapState.startOffY + dy;
+  }
+
+  // Building hover
+  const data = window.__STATE__._data;
+  let hoveredBuilding = null;
+  if (data && data.buildings) {
+    for (const b of data.buildings) {
+      if (Math.abs(tx - b.x) <= 0.5 && Math.abs(ty - b.y) <= 0.5) {
+        hoveredBuilding = b;
+        break;
+      }
+    }
+  }
+  const tooltip = document.getElementById('building-tooltip');
+  if (hoveredBuilding) {
+    window.__STATE__._hoveredBuildingId = hoveredBuilding.id;
+    const occId = hoveredBuilding.occupantId;
+    const occName = occId ? (window.__STATE__.agents[occId]?.name || '') : '';
+    const occHtml = occName ? '<br>住户: ' + occName : '';
+    tooltip.innerHTML = '<b>' + hoveredBuilding.name + '</b><br>类型: ' + hoveredBuilding.type + ' · 等级: ' + (hoveredBuilding.level || 1) + occHtml;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY + 12) + 'px';
+  } else {
+    window.__STATE__._hoveredBuildingId = null;
+    tooltip.style.display = 'none';
+  }
+
+  // Agent hover
+  let hoveredAgent = null;
+  if (data && data.agents) {
+    for (const a of data.agents) {
+      const anim = window.__ANIM_STATE__?.agents?.[a.id];
+      const ax = anim ? anim.displayX : a.x;
+      const ay = anim ? anim.displayY : a.y;
+      if (ax === undefined || ay === undefined) continue;
+      if (Math.abs(tx - ax) <= 0.5 && Math.abs(ty - ay) <= 0.5) {
+        hoveredAgent = a;
+        break;
+      }
+    }
+  }
+  window.__STATE__._hoveredAgentId = hoveredAgent ? hoveredAgent.id : null;
+  
+  // Agent tooltip
+  const agentTooltip = document.getElementById('agent-tooltip');
+  if (hoveredAgent) {
+    const jobLabel = hoveredAgent.title || '居民';
+    const statusLabel = hoveredAgent.alive === false ? '⚰️ 已故' : (hoveredAgent.health ? '❤️ 健康' : '❤️ 健在');
+    const ageStr = hoveredAgent.age ? ` · ${hoveredAgent.age}岁` : '';
+    const memCount = hoveredAgent.memories ? hoveredAgent.memories.length : 0;
+    agentTooltip.innerHTML = `<b>${hoveredAgent.name}</b><br>${jobLabel}${ageStr}<br>📝 ${memCount} 回忆`;
+    agentTooltip.style.display = 'block';
+    agentTooltip.style.left = (e.clientX + 12) + 'px';
+    agentTooltip.style.top = (e.clientY + 12) + 'px';
+  } else {
+    agentTooltip.style.display = 'none';
+  }
+}
+
+function onMouseUp() {
+  mapState.dragging = false;
+}
+
+function onWheel(e) {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  mapState.zoom = Math.max(0.5, Math.min(3, mapState.zoom * delta));
+}
+
+function onDoubleClick() {
+  // Reset view
+  const canvas = document.getElementById('mapCanvas');
+  mapState.offsetX = (canvas.width - window.__STATE__._mapW * mapState.zoom) / 2;
+  mapState.offsetY = (canvas.height - window.__STATE__._mapH * mapState.zoom) / 2;
+  mapState.zoom = 1;
+}
+
+function checkAgentClick(mx, my) {
+  // Convert screen coords to tile coords
+  const tx = Math.floor((mx - mapState.offsetX) / (TILE * mapState.zoom));
+  const ty = Math.floor((my - mapState.offsetY) / (TILE * mapState.zoom));
+  // Check if any agent is at or near this tile using display coordinates
+  const data = window.__STATE__._data;
+  if (!data || !data.agents) return;
+  for (const a of data.agents) {
+    const anim = window.__ANIM_STATE__?.agents?.[a.id];
+    const ax = anim ? anim.displayX : a.x;
+    const ay = anim ? anim.displayY : a.y;
+    if (ax === undefined || ay === undefined) continue;
+    if (Math.abs(tx - ax) <= 0.5 && Math.abs(ty - ay) <= 0.5) {
+      showAgentModal(a);
+      return;
+    }
+  }
+}
+
+/* === Agent Modal === */
+function showAgentModal(a) {
+  if (!a) return;
+  const modal = document.getElementById('agent-modal');
+  document.getElementById('modalName').textContent = `${a.name}${a.title ? ' · ' + a.title : ''}`;
+  const status = a.alive !== false ? `健在 · ${a.age}岁 · ${a.gender}` : `已故 · 享年${a.age}岁`;
+  document.getElementById('modalSub').textContent = status;
+  
+  const body = document.getElementById('modalBody');
+  let html = '';
+  
+  // Stats
+  if (a.stats) {
+    html += '<div class="modal-section"><h3>📊 状态</h3>';
+    const stats = [
+      { key: 'happiness', label: '心情', max: 100 },
+      { key: 'health', label: '健康', max: a.stats.maxHealth || 100 },
+      { key: 'energy', label: '体力', max: 100 },
+      { key: 'strength', label: '力量', max: 100 },
+      { key: 'intelligence', label: '智力', max: 100 },
+      { key: 'charisma', label: '魅力', max: 100 }
+    ];
+    for (const s of stats) {
+      const val = a.stats[s.key] || 0;
+      const pct = Math.min(100, Math.round(val / s.max * 100));
+      const cls = pct > 60 ? 'good' : pct > 30 ? 'mid' : 'bad';
+      html += `<div class="stat-row"><span class="stat-label">${s.label}</span><div class="stat-bar"><div class="stat-fill ${cls}" style="width:${pct}%"></div></div><span class="stat-val">${val}</span></div>`;
+    }
+    html += '</div>';
+  }
+  
+  // Skills
+  if (a.skills && Object.keys(a.skills).length) {
+    html += '<div class="modal-section"><h3>🔧 技能</h3>';
+    for (const [name, val] of Object.entries(a.skills)) {
+      const pct = Math.min(100, val);
+      html += `<div class="skill-bar"><span class="skill-label">${name}</span><div class="skill-fill-bg"><div class="skill-fill" style="width:${pct}%"></div></div><span class="skill-val">${val}</span></div>`;
+    }
+    html += '</div>';
+  }
+  
+  // Biography
+  if (a.biography && a.biography.persona) {
+    html += '<div class="modal-section"><h3>📖 生平</h3>';
+    if (a.biography.persona.traits && a.biography.persona.traits.length) {
+      html += `<div>性格: ${a.biography.persona.traits.join('、')}</div>`;
+    }
+    if (a.biography.persona.narrative_arc) {
+      html += `<div style="font-size:12px;margin-top:4px;color:var(--text-secondary)">${a.biography.persona.narrative_arc}</div>`;
+    }
+    if (a.biography.obituary) {
+      html += `<div style="margin-top:4px;color:var(--accent-red)">⚰️ ${a.biography.obituary.summary}</div>`;
+    }
+    html += '</div>';
+  }
+  
+  // Memories
+  if (a.memories && a.memories.length) {
+    html += '<div class="modal-section"><h3>💭 回忆</h3>';
+    const recent = a.memories.slice(-5).reverse();
+    for (const m of recent) {
+      html += `<div class="modal-memory"><span class="mem-year">Y${m.year}</span><span class="mem-text">${m.content}</span></div>`;
+    }
+    html += '</div>';
+  }
+  
+  // Family
+  if (a.family) {
+    html += '<div class="modal-section"><h3>👨‍👩‍👧 家族</h3>';
+    let familyInfo = [];
+    if (a.family.spouse) {
+      const spouse = window.__STATE__.agents[a.family.spouse];
+      familyInfo.push(`配偶: ${spouse ? spouse.name : a.family.spouse}`);
+    }
+    if (a.family.children && a.family.children.length) {
+      const kids = a.family.children.map(id => { const ag = window.__STATE__.agents[id]; return ag ? ag.name : id; });
+      familyInfo.push(`子女: ${kids.join('、')}`);
+    }
+    html += `<div>${familyInfo.length ? familyInfo.join('<br>') : '无亲属信息'}</div>`;
+    html += '</div>';
+  }
+  
+  body.innerHTML = html;
+  modal.classList.add('open');
+  notify('查看 ' + a.name, 'info');
+  updateRelationshipView(a);
+}
+
+function updateRelationshipView(a) {
+  const view = document.getElementById('relationship-view');
+  if (!view) return;
+  if (!a || !a.family) {
+    view.innerHTML = '';
+    view.style.display = 'none';
+    return;
+  }
+  let html = '<div style="font-weight:bold;margin-bottom:4px;">🔗 ' + a.name + ' 的关系</div>';
+  let items = [];
+  if (a.family.spouse) {
+    const s = window.__STATE__.agents[a.family.spouse];
+    items.push('<span>💑 配偶: ' + (s ? s.name : a.family.spouse) + '</span>');
+  }
+  if (a.family.children && a.family.children.length) {
+    const kids = a.family.children.map(id => { const ag = window.__STATE__.agents[id]; return ag ? ag.name : id; });
+    items.push('<span>👶 子女: ' + kids.join('、') + '</span>');
+  }
+  if (a.family.parents && a.family.parents.length) {
+    const ps = a.family.parents.map(id => { const ag = window.__STATE__.agents[id]; return ag ? ag.name : id; });
+    items.push('<span>👪 父母: ' + ps.join('、') + '</span>');
+  }
+  html += items.length ? items.join('<br>') : '<span style="color:#999;">无亲属信息</span>';
+  view.innerHTML = html;
+  view.style.display = 'block';
+}
+
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('agent-modal').classList.remove('open');
+});
+document.getElementById('agent-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('agent-modal').classList.remove('open');
+});
+
+/* === Fullscreen === */
+document.getElementById('fullscreenBtn').addEventListener('click', () => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    document.documentElement.requestFullscreen();
+  }
+});
+
+/* === Keyboard Shortcuts === */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'f' || e.key === 'F') {
+    document.getElementById('fullscreenBtn').click();
+  }
+  if (e.key === 'Escape') {
+    document.getElementById('agent-modal').classList.remove('open');
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+
+/* === Phase E: Topbar Status === */
+function updateTopbarStatus() {
+  const dayNightPhase = ((Date.now() % 30000) / 30000);
+  let nightAlpha = 0;
+  if (dayNightPhase > 0.2 && dayNightPhase < 0.35) nightAlpha = (dayNightPhase - 0.2) / 0.15 * 0.25;
+  else if (dayNightPhase >= 0.35 && dayNightPhase < 0.55) nightAlpha = 0.25 + (dayNightPhase - 0.35) / 0.2 * 0.1;
+  else if (dayNightPhase >= 0.55 && dayNightPhase < 0.7) nightAlpha = 0.35 - (dayNightPhase - 0.55) / 0.15 * 0.35;
+  const icon = document.getElementById('dayNightIcon');
+  if (icon) icon.textContent = nightAlpha > 0.1 ? '🌙' : '☀️';
+}
+
+/* === Search === */
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) return;
+  const data = window.__STATE__._data;
+  if (!data || !data.agents) return;
+  const match = data.agents.find(a => a.name.toLowerCase().includes(q));
+  if (match) showAgentModal(match);
+});
+
+/* === Phase 4: Season Particle Engine === */
+window.__STATE__._particles = [];
+const PARTICLE_CONFIG = {
+  spring: { count: 20, color: 'rgba(255,200,220,', size: [2,5], speed: [0.3,1], life: [100,200], char: '🌸' },
+  summer: { count: 10, color: 'rgba(255,255,200,', size: [1,3], speed: [0.2,0.6], life: [80,160], char: '✨' },
+  autumn: { count: 25, color: 'rgba(200,120,50,', size: [2,4], speed: [0.4,1.2], life: [90,180], char: '🍂' },
+  winter: { count: 40, color: 'rgba(220,230,255,', size: [1,3], speed: [0.5,1.5], life: [120,200], char: '❄' }
+};
+const FIREFLY_CONFIG = { count: 10, color: 'rgba(200,255,100,', size: [1,2], speed: [0.1,0.3], life: [200,400] };
+const CONFETTI_CONFIG = { count: 15, colors: ['#e74c3c','#f1c40f','#2ecc71','#3498db','#e67e22','#9b59b6'], size: [2,4], speed: [0.3,0.8], life: [100,200] };
+
+function spawnSeasonParticles(season) {
+  const cfg = PARTICLE_CONFIG[season] || PARTICLE_CONFIG.spring;
+  const canvas = document.getElementById('mapCanvas');
+  if (!canvas) return;
+  for (let i = 0; i < cfg.count; i++) {
+    window.__STATE__._particles.push({
+      x: Math.random() * canvas.width,
+      y: -10 - Math.random() * 50,
+      size: cfg.size[0] + Math.random() * (cfg.size[1] - cfg.size[0]),
+      speedY: cfg.speed[0] + Math.random() * (cfg.speed[1] - cfg.speed[0]),
+      speedX: (Math.random() - 0.5) * 0.5,
+      life: cfg.life[0] + Math.floor(Math.random() * (cfg.life[1] - cfg.life[0])),
+      age: 0,
+      opacity: 0.4 + Math.random() * 0.4,
+      char: cfg.char,
+      sway: Math.random() * Math.PI * 2,
+      swayAmp: 0.3 + Math.random() * 0.5
+    });
+  }
+}
+
+function updateParticles(canvas) {
+  const particles = window.__STATE__._particles;
+  if (!particles) return;
+  const season = (window.__STATE__._data || {}).season || 'spring';
+  // Respawn if particles ran out
+  if (particles.length < 5) spawnSeasonParticles(season);
+  
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.age++;
+    p.sway += 0.02;
+    p.x += p.speedX + Math.sin(p.sway) * p.swayAmp;
+    p.y += p.speedY;
+    if (p.age > p.life || p.y > canvas.height + 20) {
+      // Respawn
+      p.x = Math.random() * canvas.width;
+      p.y = -10 - Math.random() * 20;
+      p.age = 0;
+      p.opacity = 0.3 + Math.random() * 0.5;
+    }
+  }
+  updateFireflies(canvas);
+  updateConfetti(canvas);
+}
+
+function drawParticles(ctx, canvas) {
+  const particles = window.__STATE__._particles;
+  if (!particles || !particles.length) return;
+  for (const p of particles) {
+    const fadeOut = p.age > p.life * 0.7 ? (1 - (p.age - p.life * 0.7) / (p.life * 0.3)) : 1;
+    ctx.globalAlpha = p.opacity * fadeOut;
+    ctx.font = `${Math.floor(p.size * 3)}px ${PIXELIFY_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.char, p.x, p.y);
+  }
+  ctx.globalAlpha = 1;
+  drawFireflies(ctx, canvas);
+  drawConfetti(ctx, canvas);
+}
+
+function spawnFireflies() {
+  if (window.__STATE__._fireflies === undefined) window.__STATE__._fireflies = [];
+  const ff = window.__STATE__._fireflies;
+  if (ff.length > 0) return;
+  const canvas = document.getElementById('mapCanvas');
+  if (!canvas) return;
+  for (let i = 0; i < FIREFLY_CONFIG.count; i++) {
+    ff.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: FIREFLY_CONFIG.size[0] + Math.random() * (FIREFLY_CONFIG.size[1] - FIREFLY_CONFIG.size[0]),
+      speedX: (Math.random() - 0.5) * FIREFLY_CONFIG.speed[1],
+      speedY: -(FIREFLY_CONFIG.speed[0] + Math.random() * (FIREFLY_CONFIG.speed[1] - FIREFLY_CONFIG.speed[0])),
+      life: FIREFLY_CONFIG.life[0] + Math.floor(Math.random() * (FIREFLY_CONFIG.life[1] - FIREFLY_CONFIG.life[0])),
+      age: 0,
+      phase: Math.random() * Math.PI * 2,
+      baseY: Math.random() * canvas.height
+    });
+  }
+}
+
+function updateFireflies(canvas) {
+  const ff = window.__STATE__._fireflies;
+  if (!ff) return;
+  const nightAlpha = window.__STATE__._nightAlpha || 0;
+  if (nightAlpha <= 0.15) {
+    window.__STATE__._fireflies = [];
+    return;
+  }
+  if (ff.length === 0) spawnFireflies();
+  for (let i = ff.length - 1; i >= 0; i--) {
+    const f = ff[i];
+    f.age++;
+    f.phase += 0.02;
+    f.x += f.speedX + Math.sin(f.phase * 0.5) * 0.3;
+    f.y += f.speedY + Math.sin(f.phase * 0.3) * 0.2;
+    if (f.age > f.life || f.x < -20 || f.x > canvas.width + 20 || f.y < -20 || f.y > canvas.height + 20) {
+      f.x = Math.random() * canvas.width;
+      f.y = Math.random() * canvas.height;
+      f.age = 0;
+      f.phase = Math.random() * Math.PI * 2;
+    }
+  }
+}
+
+function drawFireflies(ctx, canvas) {
+  const ff = window.__STATE__._fireflies;
+  if (!ff || ff.length === 0) return;
+  const nightAlpha = window.__STATE__._nightAlpha || 0;
+  if (nightAlpha <= 0.15) return;
+  for (const f of ff) {
+    const breathe = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(f.phase * 2 + f.age * 0.02));
+    const fadeOut = f.age > f.life * 0.8 ? (1 - (f.age - f.life * 0.8) / (f.life * 0.2)) : 1;
+    ctx.globalAlpha = breathe * fadeOut * Math.min(1, nightAlpha * 4);
+    const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.size * 3);
+    grad.addColorStop(0, 'rgba(200,255,100,0.9)');
+    grad.addColorStop(0.5, 'rgba(200,255,100,0.3)');
+    grad.addColorStop(1, 'rgba(200,255,100,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.size * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,220,0.9)';
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.size * 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function spawnConfetti(season) {
+  if (window.__STATE__._confetti === undefined) window.__STATE__._confetti = [];
+  const c = window.__STATE__._confetti;
+  const canvas = document.getElementById('mapCanvas');
+  if (!canvas) return;
+  for (let i = 0; i < CONFETTI_CONFIG.count; i++) {
+    c.push({
+      x: Math.random() * canvas.width,
+      y: -10 - Math.random() * 30,
+      size: CONFETTI_CONFIG.size[0] + Math.random() * (CONFETTI_CONFIG.size[1] - CONFETTI_CONFIG.size[0]),
+      color: CONFETTI_CONFIG.colors[Math.floor(Math.random() * CONFETTI_CONFIG.colors.length)],
+      speedY: CONFETTI_CONFIG.speed[0] + Math.random() * (CONFETTI_CONFIG.speed[1] - CONFETTI_CONFIG.speed[0]),
+      speedX: (Math.random() - 0.5) * 0.4,
+      life: CONFETTI_CONFIG.life[0] + Math.floor(Math.random() * (CONFETTI_CONFIG.life[1] - CONFETTI_CONFIG.life[0])),
+      age: 0,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.05
+    });
+  }
+}
+
+function updateConfetti(canvas) {
+  const c = window.__STATE__._confetti;
+  if (!c) return;
+  for (let i = c.length - 1; i >= 0; i--) {
+    const p = c[i];
+    p.age++;
+    p.rotation += p.rotSpeed;
+    p.x += p.speedX;
+    p.y += p.speedY;
+    p.speedY += 0.01;
+    if (p.age > p.life || p.y > canvas.height + 20) {
+      c.splice(i, 1);
+    }
+  }
+}
+
+function drawConfetti(ctx, canvas) {
+  const c = window.__STATE__._confetti;
+  if (!c || c.length === 0) return;
+  for (const p of c) {
+    const fadeOut = p.age > p.life * 0.7 ? (1 - (p.age - p.life * 0.7) / (p.life * 0.3)) : 1;
+    ctx.globalAlpha = 0.8 * fadeOut;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Inject particle drawing into render loop
+const _origRenderFrame = renderFrame;
+renderFrame = function() {
+  _origRenderFrame();
+  // Overlay particles on top of the map
+  const canvas = document.getElementById('mapCanvas');
+  const ctx = canvas.getContext('2d');
+  const { offsetX, offsetY, zoom } = mapState;
+  updateParticles(canvas);
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(zoom, zoom);
+  drawParticles(ctx, canvas);
+  ctx.restore();
+};
+
+// Spawn initial particles after data loads
+const _origOnDataReady = onDataReady;
+onDataReady = function(d) {
+  _origOnDataReady(d);
+  spawnSeasonParticles(d.season);
+  // Spawn confetti if any festival matches the current season
+  if (d.festivals && d.festivals.length && d.season) {
+    for (const fest of d.festivals) {
+      if (fest.season === d.season || !fest.season) {
+        spawnConfetti(d.season);
+        break;
+      }
+    }
+  }
+};
+
+/* === Phase 4: Dashboard Expansion (Innovations + Festivals) === */
+function expandDashboard(d) {
+  const grid = document.getElementById('dashboard-grid');
+  // Add more dash items
+  if (d.innovations && d.innovations.length) {
+    const div = document.createElement('div');
+    div.className = 'dash-item';
+    div.innerHTML = `<div class="label">🔬 科技</div><div class="value" style="font-size:12px">${d.innovations.length} 项</div>`;
+    grid.appendChild(div);
+  }
+  if (d.festivals && d.festivals.length) {
+    const div = document.createElement('div');
+    div.className = 'dash-item';
+    div.innerHTML = `<div class="label">🎉 节日</div><div class="value" style="font-size:12px">${d.festivals.length} 个</div>`;
+    grid.appendChild(div);
+  }
+  // Total buildings
+  if (d.buildings && d.buildings.length) {
+    const div = document.createElement('div');
+    div.className = 'dash-item';
+    const types = {};
+    d.buildings.forEach(b => { types[b.type] = (types[b.type] || 0) + 1; });
+    div.innerHTML = `<div class="label">🏗 建筑</div><div class="value" style="font-size:11px">${d.buildings.length} 栋 (${Object.entries(types).map(([k,v])=>k+':'+v).join(' ')})</div>`;
+    grid.appendChild(div);
+  }
+  // Alive/dead count
+  if (d.agents && d.agents.length) {
+    const alive = d.agents.filter(a => a.alive !== false).length;
+    const dead = d.agents.length - alive;
+    const div = document.createElement('div');
+    div.className = 'dash-item';
+    div.innerHTML = `<div class="label">⚰️ 生死</div><div class="value" style="font-size:13px">${alive} 存 · ${dead} 逝</div>`;
+    grid.appendChild(div);
+  }
+}
+
+const _origOnDataReady2 = onDataReady;
+onDataReady = function(d) {
+  if (typeof _origOnDataReady2 === 'function') _origOnDataReady2(d);
+  else _origOnDataReady(d);
+  expandDashboard(d);
+};
+
+/* === Phase 5: Enhanced Search === */
+let _searchTimeout = null;
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  const data = window.__STATE__._data;
+  if (!data || !data.agents) return;
+  
+  // Clear previous dropdown
+  const oldDrop = document.getElementById('search-dropdown');
+  if (oldDrop) oldDrop.remove();
+  if (_searchTimeout) clearTimeout(_searchTimeout);
+  
+  if (!q) return;
+  
+  _searchTimeout = setTimeout(() => {
+    const matches = data.agents
+      .filter(a => a.name.toLowerCase().includes(q))
+      .slice(0, 10);
+    if (!matches.length) return;
+    
+    const input = document.getElementById('searchInput');
+    const rect = input.getBoundingClientRect();
+    const drop = document.createElement('div');
+    drop.id = 'search-dropdown';
+    drop.style.cssText = `
+      position: fixed; top: ${rect.bottom + 4}px; right: ${document.body.clientWidth - rect.right}px;
+      width: ${rect.width}px; max-height: 300px; overflow-y: auto;
+      background: var(--bg-panel); border: 1px solid var(--wood-light);
+      border-radius: 4px; z-index: 2000; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    `;
+    for (const a of matches) {
+      const item = document.createElement('div');
+      item.style.cssText = 'padding: 6px 10px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;';
+      const status = a.alive !== false ? '健在' : '已故';
+      const years = a.age ? `${a.age}岁` : '';
+      item.innerHTML = `<span>${a.name}${a.title ? ' · '+a.title : ''}</span><span style="color:#999;font-size:11px">${status} ${years}</span>`;
+      item.onmouseenter = () => { item.style.background = 'var(--bg-card)'; };
+      item.onmouseleave = () => { item.style.background = 'transparent'; };
+      item.onclick = () => { showAgentModal(a); drop.remove(); document.getElementById('searchInput').value = ''; };
+      drop.appendChild(item);
+    }
+    document.body.appendChild(drop);
+    
+    // Close dropdown on outside click
+    const closeDrop = (ev) => {
+      if (!drop.contains(ev.target) && ev.target !== input) {
+        drop.remove(); document.removeEventListener('click', closeDrop);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeDrop), 10);
+  }, 150);
+});
+
+/* === Phase 5: Chronicle Year Filter === */
+function addChronicleFilter() {
+  const header = document.querySelector('#chronicle-panel .panel-header');
+  if (!header) return;
+  const select = document.createElement('select');
+  select.style.cssText = 'margin-left:8px;background:var(--bg-panel);color:var(--text-on-dark);border:1px solid var(--border-color);border-radius:3px;font-size:11px;padding:1px 4px;';
+  select.innerHTML = '<option value="">全部年份</option>';
+  const data = window.__STATE__._data;
+  if (data && data.chronicle) {
+    const years = [...new Set(data.chronicle.map(e => e.year))].sort((a,b) => b-a);
+    years.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = `Y${y}`;
+      select.appendChild(opt);
+    });
+  }
+  select.addEventListener('change', (e) => {
+    const year = e.target.value;
+    const data = window.__STATE__._data;
+    if (!data || !data.chronicle) return;
+    const filtered = year ? data.chronicle.filter(ent => ent.year === parseInt(year)) : data.chronicle;
+    renderChronicle(filtered);
+  });
+  header.appendChild(select);
+  header.style.display = 'flex';
+  header.style.alignItems = 'center';
+}
+
+const _origOnDataReady3 = onDataReady;
+onDataReady = function(d) {
+  if (typeof _origOnDataReady3 === 'function') _origOnDataReady3(d);
+  else onDataReady(d);
+  addChronicleFilter();
+  // Notify latest chronicle entry
+  if (d.chronicle && d.chronicle.length) {
+    const last = d.chronicle[d.chronicle.length - 1];
+    notify('Year ' + last.year + ': ' + last.content, 'event');
+  }
+};
+
+/* === Phase D: Notification === */
+function notify(message, type) {
+  if (!type) type = 'info';
+  const feed = document.getElementById('notification-feed');
+  if (!feed) return;
+  const colors = { info: '#3498db', event: '#f1c40f', death: '#e74c3c' };
+  const el = document.createElement('div');
+  el.style.cssText = 'background:var(--bg-panel);border-left:3px solid ' + (colors[type] || colors.info) + ';padding:6px 10px;border-radius:3px;font-size:12px;color:var(--text-on-dark);transform:translateX(100%);opacity:0;transition:all 0.3s ease;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+  el.textContent = message;
+  feed.appendChild(el);
+  while (feed.children.length > 3) feed.removeChild(feed.firstChild);
+  requestAnimationFrame(function() { el.style.transform = 'translateX(0)'; el.style.opacity = '1'; });
+  setTimeout(function() {
+    el.style.transform = 'translateX(100%)';
+    el.style.opacity = '0';
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+  }, 3000);
+}
+
+/* === Phase D: Tab Switching === */
+(function initTabs() {
+  document.querySelectorAll('#chronicle-panel .tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#chronicle-panel .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      const tab = btn.getAttribute('data-tab');
+      document.getElementById('chronicle-list').style.display = tab === 'chronicle' ? '' : 'none';
+      document.getElementById('relationship-view').style.display = tab === 'relation' ? 'block' : 'none';
+    });
+  });
+})();
+
+/* === Phase E-2: Timeline === */
+(function initTimeline() {
+  const slider = document.getElementById('tlSlider');
+  const label = document.getElementById('tlLabel');
+  if (!slider || !label) return;
+  
+  // Hook into onDataReady to set max year from actual data
+  const _origOnDataReady_tl = onDataReady;
+  onDataReady = function(d) {
+    if (typeof _origOnDataReady_tl === 'function') _origOnDataReady_tl(d);
+    else onDataReady(d);
+    if (d && d.chronicle && d.chronicle.length) {
+      const maxYear = Math.max(...d.chronicle.map(e => e.year));
+      slider.max = maxYear;
+      slider.value = maxYear;
+      label.textContent = 'Year ' + maxYear;
+    }
+  };
+  
+  slider.addEventListener('input', function() {
+    const year = parseInt(this.value);
+    label.textContent = 'Year ' + year;
+    const data = window.__STATE__._data;
+    if (!data || !data.chronicle) return;
+    const filtered = data.chronicle.filter(e => e.year <= year);
+    if (typeof renderChronicle === 'function') renderChronicle(filtered);
+  });
+})();
+
+/* === Init === */
+loadData();
+</script>
+<!-- === Phase E-2: Timeline Slider === -->
+<div id="timeline-control" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.55);padding:4px 14px;border-radius:8px;border:1px solid var(--border-color);">
+  <span id="tlLabel" style="color:var(--accent-gold);font-size:12px;min-width:60px;">Year 0</span>
+  <input type="range" id="tlSlider" min="0" max="20" value="20" step="1" style="width:160px;accent-color:var(--accent-gold);">
+</div>
+</body>
+</html>

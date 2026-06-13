@@ -4,6 +4,6 @@ dist/
 *.log
 .env
 .env.local
-data/saves/backup-*.json
-data/saves/last-save.json
+data/saves/
+data/town.db
 .env

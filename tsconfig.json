@@ -14,7 +14,8 @@
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "types": ["node", "seedrandom"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
